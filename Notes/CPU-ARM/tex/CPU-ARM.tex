@@ -1,0 +1,77 @@
+\documentclass[10pt]{book}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{latexsym}
+\usepackage{ctex}
+\usepackage{mathdots}
+\usepackage{mathrsfs}
+\usepackage{longtable}
+\usepackage{supertabular}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{color, framed}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{threeparttable}
+\usepackage{graphicx}
+\usepackage{graphics}
+\usepackage{enumerate}
+\usepackage{footmisc}
+\usepackage{comment}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric}
+\usepackage{lscape}
+\usepackage[colorlinks]{hyperref}
+\usepackage{geometry}
+\setcounter{secnumdepth}{4}
+\geometry{left=2.0cm, right=2.0cm, top=2.0cm, bottom=2.0cm}
+
+\begin{document}
+
+\lstset{numbers=left, 
+	numberstyle= \tiny, 
+	keywordstyle= \color{ blue!70},
+	commentstyle=\color{red!50!green!50!blue!50},
+	frame=shadowbox, 
+	rulesepcolor= \color{ red!20!green!20!blue!20},
+	xleftmargin=-1em,
+	xrightmargin=-1em,
+	tabsize=4,
+	breaklines=true,
+    basicstyle=\small
+}
+
+\definecolor{shadecolor}{rgb}{0.92, 0.92, 0.92}
+
+\newcommand{\red}[1]{\textcolor[rgb]{1.0, 0.0, 0.0}{#1}}
+\newcommand{\green}[1]{\textcolor[rgb]{0.0, 1.0, 0.0}{#1}}
+\newcommand{\blue}[1]{\textcolor[rgb]{0.0, 0.0, 1.0}{#1}}
+\newcommand{\greenblue}[1]{\textcolor[rgb]{0.0, 1.0, 1.0}{#1}}
+\newcommand{\redB}[1]{\textcolor[rgb]{1.0, 0.0, 0.0}{\textbf{#1}}}
+\newcommand{\greenB}[1]{\textcolor[rgb]{0.0, 1.0, 0.0}{\textbf{#1}}}
+\newcommand{\blueB}[1]{\textcolor[rgb]{0.0, 0.0, 1.0}{\textbf{#1}}}
+\newcommand{\greenblueB}[1]{\textcolor[rgb]{0.0, 1.0, 1.0}{\textbf{#1}}}
+\newcommand{\mypath}[1]{/home/luoyin/Notes2016/ECG_Analysis/{#1}/}
+
+\title{CPU-ARM}
+\author{罗胤}
+\date{2018-03}
+\maketitle
+
+\tableofcontents
+
+\chapter{ARM指令集}
+\section{指令类型}
+ARM指令分类如下:
+\begin{itemize}
+  \item 数据处理指令 (Data processing). 以4位opcode标识, 最多16条数据处理指令.
+  \item 数据加载与存储指令 (Load/Store)
+  \item 分支指令 (Branch)
+\end{itemize}
+
+\chapter{ARM汇编语言}
+
+
+\end{document}
