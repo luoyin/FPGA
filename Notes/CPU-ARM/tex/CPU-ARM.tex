@@ -68,7 +68,32 @@ ARM指令分类如下:
 \begin{itemize}
   \item 数据处理指令 (Data processing). 以4位opcode标识, 最多16条数据处理指令.
   \item 数据加载与存储指令 (Load/Store)
+  \begin{itemize}
+    \item LDR    cond 01IPU0W1 Rn Rd addr\_mode
+    \item LDRB   cond 01IPU1W1 Rn Rd addr\_mode
+    \item LDRBT  cond 01I0U111 Rn Rd addr\_mode
+    \item LDRD   cond 000PUIW0 Rn Rd addr\_mode
+    \item LDREX  cond 00011001 Rn Rd SBO(4) 1001 SBO(4)
+    \item LDRH   cond 000PUIW1 Rn Rd addr\_mode(4) 1011 addr\_mode
+    \item LDRSB  cond 000OUIW1 Rn Rd addr\_mode(4) 1101 addr\_mode
+    \item LDRSH  cond 000PUIW1 Rn Rd addr\_mode(4) 1111 addr\_mode
+    \item LDRT   cond 01I0U011 Rn Rd addr\_mode
+    \item STR    cond 01IPU0W0 Rn Rd addr\_mode
+    \item STRB   cond 01IPU1W0 Rn Rd addr\_mode
+    \item STRBT  cond 01I0U110 Rn Rd addr\_mode
+    \item STRD   cond 000PUIW0 Rn Rd addr\_mode(4) 1111 addr\_mode
+    \item STREX  
+    \item STRH
+    \item STRT
+    \item 
+  \end{itemize}
   \item 分支指令 (Branch)
+  \begin{itemize}
+    \item B, BL: cond 101L simm24
+    \item BLX: 1111 101H simm24 / cond 00010010 SBO(12) 0011 Rm
+    \item BX: cond 00010010 SBO(12) 0001 Rm
+    \item BXJ: cond 00010010 SBO(12) 0010 Rm
+  \end{itemize}
 \end{itemize}
 
 \chapter{ARM汇编语言}
