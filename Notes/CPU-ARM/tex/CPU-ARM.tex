@@ -96,6 +96,114 @@ ARM指令分类如下:
   \end{itemize}
 \end{itemize}
 
+\subsection{Load/Store指令}
+\subsubsection{Addressing Mode}
+\subsubsection{Load and Store word or unsigned byte}
+\begin{itemize}
+  \item 指令格式: LDR|STR|\{<cond>\}\{B\}\{T\} Rd, <addressing\_mode>
+  \item 指令编码: cond 01IPUBWL Rn Rd addr
+  \begin{itemize}
+    \item I, P, U, W, Rn, adddr: addressing mode
+    \item L: Load (1) and Store (0)
+    \item B: unsigned byte (1) and word (0)
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{Load and Store halfword or doubleword, and load signed byte}
+\begin{itemize}
+  \item 指令格式: LDR|STR|\{<cond>\}D|H|SH|SB Rd, <addressing\_mode>
+  \item 指令编码: cond 000PUIWL Rn Rd addr(4) 1SH1 addr(4)
+  \begin{itemize}
+    \item I, P, U, W, Rn, adddr: addressing mode
+    \item L, S, H
+  \end{itemize}
+\end{itemize}
+
+\subsection{Data-processing指令}
+\subsubsection{opcode1}
+\begin{itemize}
+  \item 指令格式: <opcode1>\{<cond>\}\{S\} <Rd>, <shifter\_operand>
+  \item 指令编码: cond 00I opcode(4) S SBZ Rd shift(12)
+  \item 指令: MOV (1101), MVN (1111)
+\end{itemize}
+
+\subsubsection{opcode2}
+\begin{itemize}
+  \item 指令格式: <opcode1>\{<cond>\} <Rn>, <shifter\_operand>
+  \item 指令编码: cond 00I opcode(4) 1 Rn SBZ shift(12)
+  \item 指令: CMP (1010), CMN (1011), TST (1000), TEQ (1001)
+\end{itemize}
+
+\subsubsection{opcode3}
+\begin{itemize}
+  \item 指令格式: <opcode1>\{<cond>\}\{S\} <Rd>, <Rn>, <shifter\_operand>
+  \item 指令编码: cond 00I opcode(4) S Rn Rd shift(12)
+  \item 指令: ADD (0100), SUB (0010), RSB (0011), ADC (0101), SBC (0110), RSC (0111), AND (0000), BIC (1110), EOR (0001), ORR (1100)
+\end{itemize}
+
+\subsection{Branch指令}
+\subsubsection{B, BL}
+\begin{itemize}
+  \item 指令格式: B\{L\}\{cond\} <target\_address>
+  \item 指令编码: cond 101L simm24
+\end{itemize}
+
+\subsubsection{BLX}
+\begin{itemize}
+  \item 指令格式: BLX <target\_address>
+  \item 指令编码: 1111 101H simm24
+  \item 指令格式: BLX\{<cond>\} <Rm>
+  \item 指令编码: cond 00010010 SBO(12) 0011 Rm
+  \item 指令格式: BX\{cond\} <target\_address>
+  \item 指令编码: cond 00010010 SBO(12) 0001 Rm
+  \item 指令格式: BXJ\{cond\} <target\_address>
+  \item 指令编码: cond 00010010 SBO(12) 0010 Rm
+\end{itemize}
+
+\section{操作数类型}
+\subsection{addressing\_mode 1}
+\subsubsection{指令编码}
+\begin{itemize}
+  \item 编码区间: op[27..25], op[11..0]
+  \item 编码类型: op[27..25]=000 (imm shift \& reg shift, by op[4])
+  \begin{itemize}
+    \item op[4]=0 (imm shift): shift\_imm(5) shift(2) 0 Rm
+    \item op[4]=1 (reg shift): Rs 0 shift(2) 1 Rm
+  \end{itemize}
+  \item 编码类型: op[27..25]=001 (imm32)
+  \begin{itemize}
+    \item rotate\_imm imm8
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{具体指令}
+\begin{itemize}
+  \item \#<immediate>: rotate\_imm(4) imm8(8)
+  \item <Rm>: SBZ(8) Rm
+  \item <Rm>, LSL|LSR|ASR|ROR \#<shift\_imm>: shift\_imm(5) 00|01|10|11 0 Rm
+  \item <Rm>, LSL|LSR|ASR|ROR <Rs>: Rs 0 00|01|10|11 1 Rm
+  \item <Rm>, RRX: 0000 0110 Rm
+\end{itemize}
+
+\subsection{addressing\_mode 2}
+\begin{itemize}
+  \item imm offset/index: 010 PUBWL Rn Rd offset\_12
+  \item reg offset/index: 011 PUBWL Rn Rd SBZ(8) Rm
+  \item scaled reg offset/index: 011 PUBWL Rn Rd shift\_imm(5) shift(2) 0 Rm
+  \item 选项位
+  \begin{itemize}
+    \item P (op[24]): post-indexed (P=0), offset or pre-indexed (P=1)
+    \item U (op[23]): offset added to the base (U=1), subtracted from the base (U=0)
+    \item B (op[22]): unsigned byte (B=1), word (B=0)
+    \item W (op[21])
+    \begin{itemize}
+      \item P=0: LDR/LDRB/STR/STRB (W=0), LDRT/LDRBT/STRT/STRBT (W=1)
+      \item P=1: base reg not updated (offset, W=0), base reg updated (pre-index, W=1)
+    \end{itemize}
+    \item L (op[20]): Load (L=1), Store (L=0)
+  \end{itemize}
+\end{itemize}
+
 \chapter{ARM汇编语言}
 
 
