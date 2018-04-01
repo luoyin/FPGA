@@ -1,0 +1,55 @@
+digraph StateMach {
+	T1C1			[ label="T1(1)" ];
+	T1C2			[ label="T1(2)" ];
+	T1C3			[ label="T1(3)" ];
+	T2C1			[ label="T2(1)" ];
+	T2C2			[ label="T2(2)" ];
+	T2C3			[ label="T2(3)" ];
+	T3C1			[ label="T3(1)" ];
+	T3C2			[ label="T3(2)" ];
+	T3C3			[ label="T3(3)" ];
+	T4C1			[ label="T4(1)" ];
+	T4C2			[ label="T4(2)" ];
+	T4C3			[ label="T4(3)" ];
+	T5C1			[ label="T5(1)" ];
+	T5C2			[ label="T5(2)" ];
+	T5C3			[ label="T5(3)" ];
+	T1I				[ label="T1I" ];
+	WC1				[ label="WAIT(1)" ];
+	WC2				[ label="WAIT(2)" ];
+	WC3				[ label="WAIT(3)" ];
+	STOP			[ label="STOP" ];
+	END				[ label="END" ];
+	
+	T1I->T2C1;
+	T1C1->T2C1;
+	T2C1->WC1		[ label="#READY", fontsize=10 ];
+	WC1->T3C1		[ label="READY", fontsize=10 ];
+	T2C1->T3C1		[ label="READY", fontsize=10 ];
+	T3C1->STOP		[ label="HLT", fontsize=10 ];
+	T3C1->END		[ label="NOP+HLT+RET(F)", fontsize=10 ];
+	T3C1->T4C1		[ label="SrcR+RST", fontsize=10 ];
+	T4C1->T5C1		[ label="DstR+RST", fontsize=10 ];
+	T5C1->END;
+	
+	T3C1->T1C2		[ label="SrcM+SrcI+J/C+I/O", fontsize=10 ];
+	T4C1->T1C2		[ label="DstM", fontsize=10 ];
+	T1C2->T2C2;
+	T2C2->WC2		[ label="#READY", fontsize=10 ];
+	T2C2->T3C2		[ label="READY", fontsize=10 ];
+	WC2->T3C2		[ label="READY", fontsize=10 ];
+	T3C2->T4C2;
+	T3C2->END		[ label="OUT", fontsize=10 ];
+	T4C2->T5C2;
+	T5C2->END;
+	
+	T3C2->T1C3		[ label="J/C+DstM", fontsize=10 ]
+	T1C3->T2C3;
+	T2C3->WC3		[ label="#READY", fontsize=10 ];
+	T2C3->T3C3		[ label="READY", fontsize=10 ];
+	WC3->T3C3		[ label="READY", fontsize=10 ];
+	T3C3->T4C3		[ label="J/C(T)", fontsize=10 ];
+	T3C3->END		[ label="J/C(F)", fontsize=10 ];
+	T4C3->T5C3;
+	
+}
