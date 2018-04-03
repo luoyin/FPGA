@@ -1,7 +1,7 @@
 all: bench_top
 
 bench_top: bench_top.v bench_clock.v
-	iverilog bench_top.v bench_clock.v -o bench_top
+	iverilog bench_top.v bench_clock.v clock.v -o bench_top
 	
 run: bench_top
 	vvp -n bench_top

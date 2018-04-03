@@ -2,11 +2,11 @@
 // COPYRIGHT(c) 2018, LUOYIN
 // All rights reserved
 // 
-// IP LIB INDEX	: 
-// IP Name		: MCS8
-// File Name	: bench_clock.v
-// Module Name	: bench_clock
-// Full Name	: clock generator
+// IP LIB INDEX	:
+// IP Name		: clock
+// File Name	: clock.v
+// Module Name	: clock
+// Full Name	: clock generator for clk1 and clk2
 // 
 // Author		: LUO YIN
 // Email		: luoyin1986@gmail.com
@@ -25,48 +25,47 @@
 // DEFINE MODEL PORT
 // **********
 //
-module bench_clock(CLK_O, nRST_O);
+module clock(CLK_I, nRST_I, CLK1_O, CLK2_O);
 
 	// **********
 	// DEFINE PARAMETER
 	// **********
-	parameter HALF_CYCLE=10;
 
 	// **********
 	// DEFINE INPUT
 	// **********
+	input wire CLK_I;
+	input wire nRST_I;
 
 	// **********
 	// DEFINE OUTPUT
 	// **********
-	output reg CLK_O;
-	output reg nRST_O;
+	output wire CLK1_O;
+	output wire CLK2_O;
 
 	// **********
 	// ATRRIBUTE
 	// **********
+	reg [1:0] rCount;
 
 	// **********
 	// INSTANCE MODULE
 	// **********
+	assign CLK1_O=(~rCount[1])&( rCount[0]);
+	assign CLK2_O=( rCount[1])&( rCount[0]);
 
 	// **********
 	// MAIN CODE
 	// **********
 	initial begin
-		CLK_O=1'b0;
-		nRST_O=1'b1;
-		forever #5 CLK_O=~CLK_O;
-	end
-	
-	initial begin
-		#100 nRST_O=1'b0;
-		#200 nRST_O=1'b1;
-	end
-	
-	initial begin
-		#2000 $finish;
+		rCount<=2'b00;
 	end
 
+	always @(posedge CLK_I) begin
+		if(~nRST_I)
+			rCount<=2'b00;
+		else
+			rCount<=rCount+1;
+	end
+	
 endmodule
-

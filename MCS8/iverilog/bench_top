@@ -4,40 +4,97 @@
 :vpi_module "system";
 :vpi_module "v2005_math";
 :vpi_module "va_math";
-S_0x1842ba0 .scope module, "bench_top" "bench_top" 2 3;
+S_0x1d5f1a0 .scope module, "bench_top" "bench_top" 2 3;
  .timescale -6 -7;
-v0x1851f10_0 .net "CLK", 0 0, v0x18436a0_0; 1 drivers
-v0x1851fe0_0 .net "nRST", 0 0, v0x1851e70_0; 1 drivers
-S_0x1842c90 .scope module, "uClock" "bench_clock" 2 7, 3 3, S_0x1842ba0;
+v0x1d95040_0 .net "CLK", 0 0, v0x1d94f10_0; 1 drivers
+v0x1d950c0_0 .net "CLK1", 0 0, L_0x1d95590; 1 drivers
+v0x1d95140_0 .net "CLK2", 0 0, L_0x1d958b0; 1 drivers
+v0x1d951f0_0 .net "nRST", 0 0, v0x1d94f90_0; 1 drivers
+S_0x1d94da0 .scope module, "uClockGen" "bench_clock" 2 7, 3 28, S_0x1d5f1a0;
  .timescale -6 -7;
-v0x18436a0_0 .var "CLK_O", 0 0;
-v0x1851e70_0 .var "nRST_O", 0 0;
-    .scope S_0x1842c90;
+P_0x1d94a18 .param/l "HALF_CYCLE" 3 33, +C4<0101>;
+v0x1d94f10_0 .var "CLK_O", 0 0;
+v0x1d94f90_0 .var "nRST_O", 0 0;
+S_0x1d80f40 .scope module, "uClock" "clock" 2 8, 4 28, S_0x1d5f1a0;
+ .timescale -6 -7;
+L_0x1d953c0 .functor NOT 1, L_0x1d952f0, C4<0>, C4<0>, C4<0>;
+L_0x1d95590 .functor AND 1, L_0x1d953c0, L_0x1d954a0, C4<1>, C4<1>;
+L_0x1d958b0 .functor AND 1, L_0x1d956e0, L_0x1d95780, C4<1>, C4<1>;
+v0x1d5e830_0 .alias "CLK1_O", 0 0, v0x1d950c0_0;
+v0x1d94700_0 .alias "CLK2_O", 0 0, v0x1d95140_0;
+v0x1d947a0_0 .alias "CLK_I", 0 0, v0x1d95040_0;
+v0x1d94840_0 .net *"_s1", 0 0, L_0x1d952f0; 1 drivers
+v0x1d948f0_0 .net *"_s11", 0 0, L_0x1d95780; 1 drivers
+v0x1d94990_0 .net *"_s2", 0 0, L_0x1d953c0; 1 drivers
+v0x1d94a70_0 .net *"_s5", 0 0, L_0x1d954a0; 1 drivers
+v0x1d94b10_0 .net *"_s9", 0 0, L_0x1d956e0; 1 drivers
+v0x1d94c00_0 .alias "nRST_I", 0 0, v0x1d951f0_0;
+v0x1d94ca0_0 .var "rCount", 1 0;
+E_0x1d5e9c0 .event posedge, v0x1d947a0_0;
+L_0x1d952f0 .part v0x1d94ca0_0, 1, 1;
+L_0x1d954a0 .part v0x1d94ca0_0, 0, 1;
+L_0x1d956e0 .part v0x1d94ca0_0, 1, 1;
+L_0x1d95780 .part v0x1d94ca0_0, 0, 1;
+    .scope S_0x1d94da0;
 T_0 ;
-    %set/v v0x18436a0_0, 0, 1;
-    %set/v v0x1851e70_0, 1, 1;
+    %set/v v0x1d94f10_0, 0, 1;
+    %set/v v0x1d94f90_0, 1, 1;
 T_0.0 ;
     %delay 50, 0;
-    %load/v 8, v0x18436a0_0, 1;
+    %load/v 8, v0x1d94f10_0, 1;
     %inv 8, 1;
-    %set/v v0x18436a0_0, 8, 1;
+    %set/v v0x1d94f10_0, 8, 1;
     %jmp T_0.0;
     %end;
     .thread T_0;
-    .scope S_0x1842c90;
+    .scope S_0x1d94da0;
 T_1 ;
-    %delay 20000, 0;
-    %vpi_call 3 15 "$finish";
+    %delay 1000, 0;
+    %set/v v0x1d94f90_0, 0, 1;
+    %delay 2000, 0;
+    %set/v v0x1d94f90_0, 1, 1;
     %end;
     .thread T_1;
-    .scope S_0x1842ba0;
+    .scope S_0x1d94da0;
 T_2 ;
-    %vpi_call 2 10 "$dumpvars", 1'sb0, S_0x1842c90;
+    %delay 20000, 0;
+    %vpi_call 3 68 "$finish";
     %end;
     .thread T_2;
+    .scope S_0x1d80f40;
+T_3 ;
+    %ix/load 0, 2, 0;
+    %assign/v0 v0x1d94ca0_0, 0, 0;
+    %end;
+    .thread T_3;
+    .scope S_0x1d80f40;
+T_4 ;
+    %wait E_0x1d5e9c0;
+    %load/v 8, v0x1d94c00_0, 1;
+    %inv 8, 1;
+    %jmp/0xz  T_4.0, 8;
+    %ix/load 0, 2, 0;
+    %assign/v0 v0x1d94ca0_0, 0, 0;
+    %jmp T_4.1;
+T_4.0 ;
+    %load/v 8, v0x1d94ca0_0, 2;
+    %mov 10, 0, 30;
+    %addi 8, 1, 32;
+    %ix/load 0, 2, 0;
+    %assign/v0 v0x1d94ca0_0, 0, 8;
+T_4.1 ;
+    %jmp T_4;
+    .thread T_4;
+    .scope S_0x1d5f1a0;
+T_5 ;
+    %vpi_call 2 11 "$dumpvars", 1'sb0, S_0x1d94da0;
+    %vpi_call 2 12 "$dumpvars", 1'sb0, S_0x1d80f40;
+    %end;
+    .thread T_5;
 # The file index is used to find the file name in the following table.
-:file_names 4;
+:file_names 5;
     "N/A";
     "<interactive>";
     "bench_top.v";
     "bench_clock.v";
+    "clock.v";
