@@ -32,7 +32,8 @@ module cpu_decode(
 	D_CALL_O
 	D_RET_O,
 	D_RST_O,
-	D_IO_O,
+	D_INP_O,
+	D_OUT_O,
 	D_SRC_R_O,
 	D_SRC_M_O,
 	D_SRC_I_O,
@@ -58,7 +59,8 @@ module cpu_decode(
 	output wire D_CALL_O;
 	output wire D_RET_O;
 	output wire D_RST_O;
-	output wire D_IO_O;
+	output wire D_INP_O;
+	output wire D_OUT_O;
 	output wire D_SRC_R_O;
 	output wire D_SRC_M_O;
 	output wire D_SRC_I_O;
@@ -73,15 +75,22 @@ module cpu_decode(
 	// INSTANCE MODULE
 	// **********
 	// LOAD: 11xxxxxx/00xxx110
-	assign D_LOAD_O 	= ( (( IR_I[7])&( IR_I[6])) | ((~IR_I[7])&(~IR_I[6])&( IR_I[2])&( IR_I[1])&(~IR_I[0])) );
+	assign D_LOAD_O 	= (( IR_I[7])&( IR_I[6])) | ((~IR_I[7])&(~IR_I[6])&( IR_I[2])&( IR_I[1])&(~IR_I[0]));
 	// ALU: 10xxxxxx/00xxx100
-	assign D_ALU_O  	= ( (( IR_I[7])&(~IR_I[6])) | ((~IR_I[7])&(~IR_I[6])&( IR_I[2])&(~IR_I[1])&(~IR_I[0])) );
+	assign D_ALU_O  	= (( IR_I[7])&(~IR_I[6])) | ((~IR_I[7])&(~IR_I[6])&( IR_I[2])&(~IR_I[1])&(~IR_I[0]));
 	// JUMP: 01xxxx00
 	assign D_JUMP_O		= (~IR_I[7])&( IR_I[6])&(~IR_I[1])&(~IR_I[0]);
 	// CALL: 01xxxx10
 	assign D_CALL_O		= (~IR_I[7])&( IR_I[6])&( IR_I[1])&(~IR_I[0]);
 	// RET: 00xxxx11
 	assign D_RET_O		= (~IR_I[7])&(~IR_I[6])&( IR_I[1])&( IR_I[0]);
+	// RST: 00xxx101
+	assign D_RST_O		= (~IR_I[7])&(~IR_I[6])&( IR_I[2])&(~IR_I[1])&( IR_I[0]);
+	// INP: 0100xxx1
+	assign D_INP_O		= (~IR_I[7])&( IR_I[6])&(~IR_I[5])&(~IR_I[4])&( IR_I[0]);
+	// OUT: 01RRxxx1
+	assign D_OUT_O		= (~IR_I[7])&( IR_I[6])&( IR_I[5] |  IR_I[4])&( IR_I[0]);
+	// SRC_R: 
 	
 
 	// **********
