@@ -25,7 +25,7 @@
 // DEFINE MODEL PORT
 // **********
 //
-module clock(CLK_I, nRST_I, CLK1_O, CLK2_O);
+module clock(CLK_I, CLK1_O, CLK2_O);
 
 	// **********
 	// DEFINE PARAMETER
@@ -35,7 +35,6 @@ module clock(CLK_I, nRST_I, CLK1_O, CLK2_O);
 	// DEFINE INPUT
 	// **********
 	input wire CLK_I;
-	input wire nRST_I;
 
 	// **********
 	// DEFINE OUTPUT
@@ -62,10 +61,7 @@ module clock(CLK_I, nRST_I, CLK1_O, CLK2_O);
 	end
 
 	always @(posedge CLK_I) begin
-		if(~nRST_I)
-			rCount<=2'b00;
-		else
-			rCount<=rCount+1;
+		rCount<=rCount+1;
 	end
 	
 endmodule
