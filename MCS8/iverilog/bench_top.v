@@ -2,16 +2,59 @@
 
 module bench_top;
 
-	wire CLK, nRST, CLK1, CLK2, SYNC;
-
+	wire CLK, nRST, CLK1, CLK2, SYNC, READY, INT;
+	wire [7:0] DAT_CPU_I;
+	wire [7:0] DAT_CPU_O;
+	wire [2:0] STATE;
+	reg [13:0] ADDR;
+	reg [1:0] CYC_CTRL;
+	
+	// State
+	wire wStateT1, wStateT2, wStateT3, wStateT4, wStateT5;
+	
 	bench_clock #(.HALF_CYCLE(5)) uClockGen(.CLK_O(CLK), .nRST_O(nRST));
 	clock uClock(.CLK_I(CLK), .CLK1_O(CLK1), .CLK2_O(CLK2));
-	cpu uCPU(.CLK1_I(CLK1), .CLK2_I(CLK2), .nRST_I(nRST), .SYNC_O(SYNC));
+	cpu uCPU(
+		.CLK1_I(CLK1), .CLK2_I(CLK2), .nRST_I(nRST), 
+		.SYNC_O(SYNC),
+		.READY_I(READY), .INT_I(INT),
+		.STATE_O(STATE),
+		.DAT_I(DAT_CPU_I), .DAT_O(DAT_CPU_O)
+	);
 	
+	// State
+	// T1: 010
+	assign wStateT1=(~STATE[2])&( STATE[1])&(~STATE[0]);
+	// T2: 100
+	assign wStateT2=( STATE[2])&(~STATE[1])&(~STATE[0]);
+	// T3: 001
+	assign wStateT3=(~STATE[2])&(~STATE[1])&( STATE[0]);
+	// T4: 111
+	assign wStateT4=( STATE[2])&( STATE[1])&( STATE[0]);
+	// T5: 101
+	assign wStateT5=( STATE[2])&(~STATE[1])&( STATE[0]);
+	
+	// Address Latch
+	always @(posedge CLK2) begin
+		if(nRST) begin
+			ADDR 		<= 14'b0;
+			CYC_CTRL 	<= 2'b0;
+			end
+		else if(wStateT1 & SYNC) begin
+			ADDR[7:0] 	<= DAT_CPU_O;
+			end
+		else if(wStateT2 & SYNC) begin
+			ADDR[13:8] 	<= DAT_CPU_O[5:0];
+			CYC_CTRL   	<= DAT_CPU_O[7:6];
+			end
+		end
+	
+	
+	// Debug
 	initial begin
 		$dumpvars(0, uClockGen);
 		$dumpvars(0, uClock);
 		$dumpvars(0, uCPU);
 	end
-
+	
 endmodule

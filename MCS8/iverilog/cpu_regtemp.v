@@ -26,8 +26,8 @@
 //
 module cpu_regtemp(
 	CLK1_I, CLK2_I, SYNC_I, nRST_I,
-	CS_I, RD_I, WR_I,
-	DAT_I, DAT_O, DAT_ALU_O
+	RD_I, WR_I,
+	DAT_I, DAT_O, DAT_RAW_O
 );
 
 	// **********
@@ -45,11 +45,13 @@ module cpu_regtemp(
 	// DEFINE OUTPUT
 	// **********
 	output wire [7:0] DAT_O;
-	output wire [7:0] DAT_ALU_O;
+	output wire [7:0] DAT_RAW_O;
 
 	// **********
 	// ATRRIBUTE
 	// **********
+	reg [7:0] rTemp;
+	wire [7:0] wCS;
 
 	// **********
 	// INSTANCE MODULE
@@ -58,5 +60,15 @@ module cpu_regtemp(
 	// **********
 	// MAIN CODE
 	// **********
+	assign wCS = { RD_I, RD_I, RD_I, RD_I, RD_I, RD_I, RD_I, RD_I };
+	assign DAT_RAW_O = rTemp;
+	assign DAT_O = wCS & rTemp;
+	
+	always @(posedge CLK2_I) begin
+		if(~nRST_I)
+			rTemp <= 8'b0;
+		else if(WR_I)
+			rTemp <= DAT_I;
+		end
 
 endmodule

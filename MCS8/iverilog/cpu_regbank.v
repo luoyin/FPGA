@@ -26,7 +26,7 @@
 //
 module cpu_regbank(
 	CLK1_I, CLK2_I, SYNC_I, nRST_I,
-	CS_I, RD_I, WR_I, INC_I, DCR_I,
+	RD_I, WR_I, INC_I, DCR_I,
 	ADDR_I, DAT_I, DAT_O
 );
 
@@ -56,8 +56,8 @@ module cpu_regbank(
 	// **********
 	// INSTANCE MODULE
 	// **********
-	assign wCS = {CS_I, CS_I, CS_I, CS_I, CS_I, CS_I, CS_I, CS_I};
-	assign DAT_O = wCS & RD_I & rBank[ADDR_I];
+	assign wCS = { RD_I, RD_I, RD_I, RD_I, RD_I, RD_I, RD_I, RD_I };
+	assign DAT_O = wCS & rBank[ADDR_I];
 
 	// **********
 	// MAIN CODE
@@ -73,13 +73,13 @@ module cpu_regbank(
 			rBank[6]<=8'b0;
 			rBank[7]<=8'b0;
 			end
-		else if (CS_I & (~SYNC_I) & WR_I) begin
+		else if (WR_I) begin
 			rBank[ADDR_I]<=DAT_I;
 			end
-		else if (CS_I & (~SYNC_I) & INC_I) begin
+		else if (INC_I) begin
 			rBank[ADDR_I]<=rBank[ADDR_I]+1;
 			end
-		else if (CS_I & (~SYNC_I) & DCR_I) begin
+		else if (DCR_I) begin
 			rBank[ADDR_I]<=rBank[ADDR_I]-1;
 			end
 		else begin

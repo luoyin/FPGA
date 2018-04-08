@@ -27,8 +27,10 @@
 module cpu(
 	CLK1_I, CLK2_I, nRST_I,
 	SYNC_O,
-	DATA_I,
-	DATA_O
+	READY_I, INT_I,
+	STATE_O,
+	DAT_I,
+	DAT_O
 );
 
 	// **********
@@ -42,16 +44,16 @@ module cpu(
 	// **********
 	// DEFINE INPUT
 	// **********
-	input wire CLK1_I;
-	input wire CLK2_I;
-	input wire nRST_I;
-	input wire [7:0] DATA_I;
+	input wire CLK1_I, CLK2_I, nRST_I;
+	input wire READY_I, INT_I;
+	input wire [7:0] DAT_I;
 
 	// **********
 	// DEFINE OUTPUT
 	// **********
 	output reg SYNC_O;
-	output wor [7:0] DATA_O;
+	output wire [2:0] STATE_O;
+	output wor [7:0] DAT_O;
 
 	// **********
 	// ATRRIBUTE
@@ -94,6 +96,22 @@ module cpu(
 	wire wSEL_CycleCtrl_PCI, wSEL_CycleCtrl_PCC, wSEL_CycleCtrl_PCR, wSEL_CycleCtrl_PCW;
 	// State Control
 	wire wStateT1, wStateT2, wStateT3, wStateT4, wStateT5, wStateT1I, wStateSTOP, wStateWAIT;
+	// BUS internal
+	wor [7:0] wBUS;
+	wire wBUS_In, wBUS_Out;
+	
+	// BusControl
+	// RegAlpha Control
+	wire wRegAlpha_RD, wRegAlpha_WR;
+	wire [7:0] wRegAlpha_Raw;
+	// RegBeta Control
+	wire wRegBeta_RD, wRegBeta_WR;
+	wire [7:0] wRegBeta_Raw;
+	// Stack Control
+	wire wStack_RD, wStack_WR, wStack_HA, wStacK_INCR, wStack_PUSH, wStacK_POP;
+	// RegBank Control
+	wire wRegBank_RD, wRegBank_WR, wRegBank_INC, wRegBank_DCR;
+	wire [2:0] wRegBank_ADDR;
 
 	// **********
 	// INSTANCE MODULE
@@ -104,6 +122,7 @@ module cpu(
 		( ( rIR[4])&(~rIR[3])&(rStatus[0]) ) |				// Sign
 		( ( rIR[4])&( rIR[3])&(rStatus[2]) )				// Parity
 	) ) );
+	assign STATE_O = wState;
 	
 	cpu_decode uDecode(
 		.IR_I(rIR),
@@ -117,7 +136,7 @@ module cpu(
 	cpu_state2 uState(
 		.CLK1_I(CLK1_I), .CLK2_I(CLK2_I), .SYNC_I(SYNC_O),
 		.nRST_I(nRST_I),
-		.READY_I(1'b1), .INT_I(1'b0),
+		.READY_I(READY_I), .INT_I(INT_I),
 		.COND_I(1'b1),
 		.D_NOP_I(wD_NOP), .D_HLT_I(wD_HLT),
 		.D_INC_I(wD_INC), .D_DCR_I(wD_DCR), .D_ROT_I(wD_ROT), .D_RETC_I(wD_RETC), .D_ALUI_I(wD_ALUI), .D_RST_I(wD_RST), .D_LRI_I(wD_LRI), .D_LMI_I(wD_LMI), .D_RET_I(wD_RET),
@@ -125,6 +144,25 @@ module cpu(
 		.D_ALUR_I(wD_ALUR), .D_ALUM_I(wD_ALUM),
 		.D_LRR_I(wD_LRR), .D_LRM_I(wD_LRM), .D_LMR_I(wD_LMR),
 		.STATE_O(wState), .CYCLE_O(wCycle)
+	);
+	// Stack
+	cpu_stack uStack(
+		.CLK1_I(CLK1_I), .CLK2_I(CLK2_I), .SYNC_I(SYNC_O), .nRST_I(nRST_I),
+		.RD_I(wStack_RD), .WR_I(wStack_WR), .HA_I(wStack_HA), .INCR_I(wStacK_INCR),
+		.PUSH_I(wStack_PUSH), .POP_I(wStack_POP),
+		.DAT_I(wBUS), .DAT_O(wBUS)
+	);
+	// RegBank
+	cpu_regbank uRegBank(
+		.CLK1_I(CLK1_I), .CLK2_I(CLK2_I), .SYNC_I(SYNC_O), .nRST_I(nRST_I),
+		.RD_I(wRegBank_RD), .WR_I(wRegBank_WR), .INC_I(wRegBank_INC), .DCR_I(wRegBank_DCR),
+		.ADDR_I(wRegBank_ADDR), .DAT_I(wBus), .DAT_O(wBus)
+	);
+	// RegAlpha
+	cpu_regtemp uRegAlpha(
+		.CLK1_I(CLK1_I), .CLK2_I(CLK2_I), .SYNC_I(SYNC_O), .nRST_I(nRST_I),
+		.RD_I(wRegAlpha_RD), .WR_I(wRegAlpha_WR),
+		.DAT_I(wBUS), .DAT_O(wBUS), .DAT_RAW_O(
 	);
 
 	// **********
@@ -188,7 +226,16 @@ module cpu(
 	assign wSEL_BusOut_PCH = (wCycleC1 & wStateT2) |
 							 (wCycleC2 & wStateT2 & (wD_JMP_CAL | wD_ALUI | wD_LRI)) |
 							 (wCycleC3 & wStateT2 & wD_JMP_CAL);
+	assign wSEL_BusOut_RegL = (wCycleC2 & wStateT1 & (wD_ALUM | wD_LMR | wD_LRM)) |
+							  (wCycleC3 & wStateT1 & wD_LMI);
+	assign wSEL_BusOut_RegH = (wCycleC2 & wStateT2 & (wD_ALUM | wD_LMR | wD_LRM)) |
+							  (wCycleC3 & wStateT2 & wD_LMI);
+	assign wSEL_BusOut_RegAlpha = (wCycleC2 & wStateT1 & (wD_INP | wD_OUT));
+	assign wSEL_BusOut_RegBeta  = (wCycleC2 & wStateT2 & (wD_INP | wD_OUT));
 							 
-	assign DATA_O=8'b0;
+	assign DAT_O=8'b0;
+	
+	// Stack Signal
+	
 	
 endmodule
