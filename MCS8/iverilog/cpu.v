@@ -61,25 +61,17 @@ module cpu(
 	// Status Register
 	reg [3:0] rStatus;			// C3, P2, Z1, S0
 	// Register Bank
-	reg [7:0] rRegBank[6..0];
+	reg [7:0] rRegBank[6:0];
 	// Temp Register
 	reg [7:0] rRegAlpha;
 	reg [7:0] rRegBeta;
 	// Stack
-	reg [13:0] rStack[7..0];
+	reg [13:0] rStack[7:0];
 	reg [2:0] rStack_ndx;
+	// BUS
+	wor [7:0] rBusOut;
 	
 	// Decode Signal
-	/*
-	wire wD_NOP, wD_HLT;
-	wire wD_LOAD, wD_ALU, wD_ROT, wD_INC, wD_DCR;
-	wire wD_JUMP, wD_CALL, wD_RET, wD_RST;
-	wire wD_INP, wD_OUT;
-	wire wD_SRC_R, wD_SRC_M, wD_SRC_I;
-	wire wD_DST_R, wD_DST_M;
-	wire [2:0] wD_SRC_R_NDX;
-	wire [2:0] wD_DST_R_NDX;
-	*/
 	wire wD_NOP, wD_HLT;
 	wire wD_INC, wD_DCR, wD_ROT, wD_RETC, wD_ALUI, wD_RST, wD_LRI, wD_LMI, wD_RET;
 	wire wD_JMPC, wD_CALC, wD_JMP, wD_CAL, wD_INP, wD_OUT;
@@ -113,18 +105,7 @@ module cpu(
 		( ( rIR[4])&( rIR[3])&(rStatus[2]) )				// Parity
 	) ) );
 	
-	/*
 	cpu_decode uDecode(
-		.IR_I(rIR),
-		.D_NOP_O(wD_NOP), .D_HLT_O(wD_HLT),
-		.D_LOAD_O(wD_LOAD), .D_ALU_O(wD_ALU), .D_ROT_O(wD_ROT), .D_INC_O(wD_INC), .D_DCR_O(wD_DCR),
-		.D_JUMP_O(wD_JUMP), .D_CALL_O(wD_CALL), .D_RET_O(wD_RET), .D_RST_O(wD_RST),
-		.D_INP_O(wD_INP), .D_OUT_O(wD_OUT),
-		.D_SRC_R_O(wD_SRC_R), .D_SRC_M_O(wD_SRC_M), .D_SRC_I_O(wD_SRC_I),
-		.D_DST_R_O(wD_DST_R), .D_DST_M_O(wD_DST_M),
-		.D_SRC_R_NDX_O(wD_SRC_R_NDX), .D_DST_R_NDX_O(wD_DST_R_NDX)
-	);*/
-	cpu_decode2 uDecode(
 		.IR_I(rIR),
 		.D_NOP_O(wD_NOP), .D_HLT_O(wD_HLT),
 		.D_INC_O(wD_INC), .D_DCR_O(wD_DCR), .D_ROT_O(wD_ROT), .D_RETC_O(wD_RETC), .D_ALUI_O(wD_ALUI), .D_RST_O(wD_RST), .D_LRI_O(wD_LRI), .D_LMI_O(wD_LMI), .D_RET_O(wD_RET),
@@ -197,7 +178,7 @@ module cpu(
 	// STOP: 011
 	assign wStateSTOP = (~wState[2])&( wState[1])&( wState[0]);
 	// WAIT: 000
-	assign wStateWAIT = (~WState[2])&(~wState[1])&(~wState[0]);
+	assign wStateWAIT = (~wState[2])&(~wState[1])&(~wState[0]);
 	
 	// BUS OUT Control
 	// PCL/PCH, RegL/RegH, RegAlpha, RegBeta, COND
@@ -207,7 +188,7 @@ module cpu(
 	assign wSEL_BusOut_PCH = (wCycleC1 & wStateT2) |
 							 (wCycleC2 & wStateT2 & (wD_JMP_CAL | wD_ALUI | wD_LRI)) |
 							 (wCycleC3 & wStateT2 & wD_JMP_CAL);
-	
-	
+							 
+	assign DATA_O=8'b0;
 	
 endmodule

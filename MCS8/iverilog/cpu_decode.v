@@ -24,7 +24,7 @@
 // DEFINE MODEL PORT
 // **********
 //
-module cpu_decode2(
+module cpu_decode(
 	IR_I,
 	D_NOP_O, D_HLT_O,
 	D_INC_O, D_DCR_O, D_ROT_O, D_RETC_O, D_ALUI_O, D_RST_O, D_LRI_O, D_LMI_O, D_RET_O,
