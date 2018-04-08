@@ -1,0 +1,5 @@
+#Start recording tcl command: 4/7/2018 09:22:17
+#Project Location: /disk1/projects/FPGA/Lattice-MXO2-4000HC/Pin; Project name: Pin
+prj_project new -name "Pin" -impl "impl1" -dev LCMXO2-4000HC-4MG132C -synthesis "lse"
+prj_project save
+#Stop recording: 4/7/2018 09:48:08

@@ -1,0 +1,10 @@
+#Start recording tcl command: 4/7/2018 10:24:39
+#Project Location: /disk1/projects/FPGA/Lattice-MXO2-4000HC/Pin; Project name: Pin
+prj_project open "/disk1/projects/FPGA/Lattice-MXO2-4000HC/Pin/Pin.ldf"
+prj_src add "/disk1/projects/FPGA/Lattice-MXO2-4000HC/Pin/wor_test.v"
+prj_run Synthesis -impl impl1 -task Lattice_Synthesis
+prj_run Synthesis -impl impl1 -task Lattice_Synthesis
+prj_run Map -impl impl1
+prj_run PAR -impl impl1
+prj_run PAR -impl impl1
+#Stop recording: 4/7/2018 10:33:10
