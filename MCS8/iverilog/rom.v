@@ -62,7 +62,8 @@ module rom(
 	assign DAT_O = wCS & mem[ADDR_I];
 	
 	initial begin
-		$readmemh("rom.dat", mem);
+		// $readmemh("rom.dat", mem);
+		$readmemb("rom_bin.dat", mem);
 		end
 
 endmodule

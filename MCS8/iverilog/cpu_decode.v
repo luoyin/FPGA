@@ -70,7 +70,7 @@ module cpu_decode(
 	// INC:			00DDD000
 	assign D_INC_O		= (wOP00)&(~(&IR_I[5:3]))&(|IR_I[5:3])&(~IR_I[2])&(~IR_I[1])&(~IR_I[0]);
 	// DCR:			00DDD001
-	assign D_INC_O		= (wOP00)&(~(&IR_I[5:3]))&(|IR_I[5:3])&(~IR_I[2])&(~IR_I[1])&( IR_I[0]);
+	assign D_DCR_O		= (wOP00)&(~(&IR_I[5:3]))&(|IR_I[5:3])&(~IR_I[2])&(~IR_I[1])&( IR_I[0]);
 	// ROT:			000xx010
 	assign D_ROT_O		= (wOP00)&(~IR_I[5])&(~IR_I[2])&( IR_I[1])&(~IR_I[0]);
 	// RETC:		00CCC011

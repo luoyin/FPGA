@@ -17,7 +17,8 @@
 // Called By	: 
 // 
 // Modification Histroy
-// 
+// 2018/04/09 	State Transition Test
+//					Passed: LRR
 // **********
 
 // **********
@@ -30,11 +31,10 @@ module cpu_state(
 	READY_I, INT_I,
 	COND_I,
 	D_NOP_I, D_HLT_I,
-	D_LOAD_I, D_ALU_I, D_ROT_I, D_INC_I, D_DCR_I,
-	D_JUMP_I, D_CALL_I, D_RET_I, D_RST_I,
-	D_INP_I, D_OUT_I,
-	D_SRC_R_I, D_SRC_M_I, D_SRC_I_I,
-	D_DST_R_I, D_DST_M_I,
+	D_INC_I, D_DCR_I, D_ROT_I, D_RETC_I, D_ALUI_I, D_RST_I, D_LRI_I, D_LMI_I, D_RET_I,
+	D_JMPC_I, D_CALC_I, D_JMP_I, D_CAL_I, D_INP_I, D_OUT_I,
+	D_ALUR_I, D_ALUM_I,
+	D_LRR_I, D_LRM_I, D_LMR_I,
 	STATE_O, CYCLE_O
 );
 
@@ -50,11 +50,10 @@ module cpu_state(
 	input wire READY_I, INT_I;
 	input wire COND_I;
 	input wire D_NOP_I, D_HLT_I;
-	input wire D_LOAD_I, D_ALU_I, D_ROT_I, D_INC_I, D_DCR_I;
-	input wire D_JUMP_I, D_CALL_I, D_RET_I, D_RST_I;
-	input wire D_INP_I, D_OUT_I;
-	input wire D_SRC_R_I, D_SRC_M_I, D_SRC_I_I;
-	input wire D_DST_R_I, D_DST_M_I;
+	input wire D_INC_I, D_DCR_I, D_ROT_I, D_RETC_I, D_ALUI_I, D_RST_I, D_LRI_I, D_LMI_I, D_RET_I;
+	input wire D_JMPC_I, D_CALC_I, D_JMP_I, D_CAL_I, D_INP_I, D_OUT_I;
+	input wire D_ALUR_I, D_ALUM_I;
+	input wire D_LRR_I, D_LRM_I, D_LMR_I;
 
 	// **********
 	// DEFINE OUTPUT
@@ -121,27 +120,24 @@ module cpu_state(
 					// NOP
 					else if(D_NOP_I)
 									rState<=S_C1_T1;
-					// INr/DCr (Error)
-					else if( (D_DST_M_I) & (D_INC_I | D_DCR_I) )
-									rState<=S_STOP;
 					// INr/DCr/ROT/RST		-> C1_T4
 					else if( D_INC_I | D_DCR_I | D_ROT_I | D_RST_I )
 									rState<=S_C1_T4;
 					// L?r/ALUr				-> C1_T4
-					else if( (D_SRC_R_I) & (D_LOAD_I | D_ALU_I) )
+					else if( D_LRR_I | D_LMR_I | D_ALUR_I )
 									rState<=S_C1_T4;
 					// RET (true)
-					else if( D_RET_I & COND_I )
+					else if( D_RET_I | (D_RETC_I & COND_I) )
 									rState<=S_C1_T4;
 					// RET (false)
-					else if( D_RET_I & (~COND_I) )
+					else if( D_RETC_I & (~COND_I) )
 									rState<=S_C1_T1;
 					else
 									rState<=S_C2_T1;
 					end
 				S_C1_T4:	begin
 					// LMr
-					if( D_LOAD_I & D_DST_M_I )
+					if( D_LMR_I )
 									rState<=S_C2_T1;
 					else
 									rState<=S_C1_T5;
@@ -161,13 +157,13 @@ module cpu_state(
 					end
 				S_C2_T3:	begin
 					// JUMP/CALL			-> C3_T1
-					if( D_JUMP_I | D_CALL_I )
+					if( D_JMP_I | D_JMPC_I | D_CAL_I | D_CALC_I )
 									rState<=S_C3_T1;
 					// LMI					-> C3_T1
-					else if( D_LOAD_I & D_SRC_I_I & D_DST_M_I )
+					else if( D_LMI_I )
 									rState<=S_C3_T1;
 					// OUT
-					else if( D_OUT_I )
+					else if( D_OUT_I | D_LMR_I )
 									rState<=INT_Test(INT_I);
 					else
 									rState<=S_C2_T4;
@@ -182,14 +178,14 @@ module cpu_state(
 									rState<=WAIT_Test(READY_I, S_C2_T3, S_C2_WAIT);
 					end
 				S_C3_T1:	begin
-									rState<=S_C3_T1;
+									rState<=S_C3_T2;
 					end
 				S_C3_T2:	begin
 									rState<=WAIT_Test(READY_I, S_C3_T3, S_C3_WAIT);
 					end
 				S_C3_T3:	begin
 					// JUMP/CALL (true)
-					if( (D_JUMP_I | D_CALL_I) & COND_I )
+					if( D_JMP_I | D_CAL_I | ( D_JMPC_I & COND_I) | ( D_CALC_I & COND_I) )
 									rState<=S_C3_T4;
 					else
 									rState<=INT_Test(INT_I);
@@ -215,7 +211,7 @@ module cpu_state(
 		end
 	end
 	
-	function INT_Test;
+	function [4:0] INT_Test;
 		input INT;
 		begin
 			if(INT)					INT_Test=S_T1I;
@@ -223,8 +219,9 @@ module cpu_state(
 		end
 	endfunction
 	
-	function WAIT_Test;
-		input READY, StateNext, StateWait;
+	function [4:0] WAIT_Test;
+		input READY;
+		input [4:0] StateNext, StateWait;
 		if(READY)					WAIT_Test=StateNext;
 		else						WAIT_Test=StateWait;
 	endfunction

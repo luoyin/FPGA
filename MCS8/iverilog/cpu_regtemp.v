@@ -38,7 +38,7 @@ module cpu_regtemp(
 	// DEFINE INPUT
 	// **********
 	input wire CLK1_I, CLK2_I, SYNC_I, nRST_I;
-	input wire CS_I, RD_I, WR_I;
+	input wire RD_I, WR_I;
 	input wire [7:0] DAT_I;
 
 	// **********
@@ -51,7 +51,6 @@ module cpu_regtemp(
 	// ATRRIBUTE
 	// **********
 	reg [7:0] rTemp;
-	wire [7:0] wCS;
 
 	// **********
 	// INSTANCE MODULE
@@ -60,9 +59,8 @@ module cpu_regtemp(
 	// **********
 	// MAIN CODE
 	// **********
-	assign wCS = { RD_I, RD_I, RD_I, RD_I, RD_I, RD_I, RD_I, RD_I };
 	assign DAT_RAW_O = rTemp;
-	assign DAT_O = wCS & rTemp;
+	assign DAT_O = {8{RD_I}} & rTemp;
 	
 	always @(posedge CLK2_I) begin
 		if(~nRST_I)
