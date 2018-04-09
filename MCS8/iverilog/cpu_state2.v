@@ -210,7 +210,7 @@ module cpu_state2(
 		end
 	end
 	
-	function INT_Test;
+	function [4:0] INT_Test;
 		input INT;
 		begin
 			if(INT)					INT_Test=S_T1I;
@@ -218,7 +218,7 @@ module cpu_state2(
 		end
 	endfunction
 	
-	function WAIT_Test;
+	function [4:0] WAIT_Test;
 		input READY, StateNext, StateWait;
 		if(READY)					WAIT_Test=StateNext;
 		else						WAIT_Test=StateWait;

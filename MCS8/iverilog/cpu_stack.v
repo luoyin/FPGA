@@ -63,8 +63,8 @@ module cpu_stack(
 	// **********
 	// MAIN CODE
 	// **********
-	assign wRDH = { 1'b0, 1'b0, RD_I&HA_I, RD_I&HA_I, RD_I&HA_I, RD_I&HA_I, RD_I&HA_I, RD_I&HA_I };
-	assign wRDL = { RD_I&(~HA_I), RD_I&(~HA_I), RD_I&(~HA_I), RD_I&(~HA_I), RD_I&(~HA_I), RD_I&(~HA_I), RD_I&(~HA_I), RD_I&(~HA_I) };
+	assign wRDH = { 1'b0, 1'b0, { 6{RD_I&HA_I} } };
+	assign wRDL = { 8{RD_I&(~HA_I)} };
 	assign DAT_O = (wRDH & {1'b0, 1'b0, rStack[rStack_ndx][13:8]}) | (wRDL & rStack[rStack_ndx][7:0]);
 	
 	always @(posedge CLK2_I) begin
@@ -85,7 +85,7 @@ module cpu_stack(
 		else if(WR_I&(~HA_I)) begin
 			rStack[rStack_ndx][7:0] <= DAT_I[7:0];
 			end
-		else if(DAT_I) begin
+		else if(INCR_I) begin
 			rStack[rStack_ndx] <= rStack[rStack_ndx]+1;
 			end
 		else if(PUSH_I) begin
