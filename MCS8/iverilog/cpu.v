@@ -70,11 +70,7 @@ module cpu(
 	wire wD_JMP_CAL;
 	// Condition Signal
 	wire wCond;
-	// BUS Out Control
-	wire wCSI_BusOut_PCL, wCSI_BusOut_PCH;
-	wire wCSI_BusOut_RegL, wCSI_BusOut_RegH;
-	wire wCSI_BusOut_RegAlpha, wCSI_BusOut_RegBeta;
-	wire wCSI_BusOut_Cond;
+	
 	// State Control
 	wire [2:0] wState;
 	wire [1:0] wCycle;
@@ -89,23 +85,37 @@ module cpu(
 	wire wBUS_In, wBUS_Out;
 	
 	// BusControl
-	// BUS
 	wire wBusOut, wBusIn;
+	wire wCSI_BusOut_PCL, wCSI_BusOut_PCH;
+	wire wCSI_BusOut_RegL, wCSI_BusOut_RegH;
+	wire wCSI_BusOut_RegAlpha, wCSI_BusOut_RegBeta;
+	wire wCSI_BusOut_Cond;
+	
 	// RegAlpha Control
-	wire wRegAlpha_RD, wRegAlpha_WR;
+	wire wRegAlpha_RD;
+	wire wRegAlpha_WR;
+	wire wRegAlpha_CLR;
 	wire [7:0] wRegAlpha_Raw;
+	
 	// RegBeta Control
-	wire wRegBeta_RD, wRegBeta_WR;
+	wire wRegBeta_RD;
+	wire wRegBeta_WR;
 	wire [7:0] wRegBeta_Raw;
+	
 	// RegIR Control
-	wire wRegID_RD, wRegID_WR;
+	wire wRegID_WR;
 	wire [7:0] wIR;
+	
 	// Stack Control
-	wire wStack_RD, wStack_WR, wStack_HA, wStacK_INCR, wStack_PUSH, wStacK_POP;
-	// RegBank Control
-	wire wRegBank_RD, wRegBank_WR, wRegBank_INC, wRegBank_DCR;
-	wire [2:0] wRegBank_ADDR;
+	wire wCSI_Stack;
+	wire wStack_WR, wStack_HA, wStacK_INCR, wStack_PUSH, wStacK_POP;
+	
+	// RegBank Signal
+	wire wRegBank_RD, wRegBank_WR;
+	wire wRegBank_INC, wRegBank_DCR;
 	wire wRegBank_Src, wRegBank_Dst, wRegBank_DstA;
+	wire [2:0] wsRegBank_ADDR;
+	
 	// ALU
 	wire [7:0] wALU_E;
 	wire [2:0] wALU_OP;
@@ -117,6 +127,10 @@ module cpu(
 	// Status Register
 	wire wStatus_C, wStatus_P, wStatus_Z, wStatus_S;
 	wire wStatus_WR;
+	
+	// Data Path
+	wire wDP_RegBank_RegBeta_T4;
+	wire wDP_RegBeta_RegBank_T5;
 
 	// **********
 	// INSTANCE MODULE
@@ -145,34 +159,39 @@ module cpu(
 	// Stack
 	cpu_stack uStack(
 		.CLK1_I(CLK1_I), .CLK2_I(CLK2_I), .SYNC_I(SYNC_O), .nRST_I(nRST_I),
-		.RD_I(wStack_RD), .WR_I(wStack_WR), .HA_I(wStack_HA), .INCR_I(wStack_INCR),
+		.RD_I(wCSI_Stack), .WR_I(wStack_WR), .HA_I(wStack_HA), .INCR_I(wStack_INCR),
 		.PUSH_I(wStack_PUSH), .POP_I(wStack_POP),
 		.DAT_I(wBUS), .DAT_O(wBUS)
 	);
+	
 	// RegBank
 	cpu_regbank uRegBank(
 		.CLK1_I(CLK1_I), .CLK2_I(CLK2_I), .SYNC_I(SYNC_O), .nRST_I(nRST_I),
 		.RD_I(wRegBank_RD), .WR_I(wRegBank_WR), .INC_I(wRegBank_INC), .DCR_I(wRegBank_DCR),
-		.ADDR_I(wRegBank_ADDR), .DAT_I(wBUS), .DAT_O(wBUS)
+		.ADDR_I(wsRegBank_ADDR), .DAT_I(wBUS), .DAT_O(wBUS)
 	);
+	
 	// RegAlpha
 	cpu_regtemp uRegAlpha(
 		.CLK1_I(CLK1_I), .CLK2_I(CLK2_I), .SYNC_I(SYNC_O), .nRST_I(nRST_I),
-		.RD_I(wRegAlpha_RD), .WR_I(wRegAlpha_WR),
+		.RD_I(wRegAlpha_RD), .WR_I(wRegAlpha_WR), .CLR_I(wRegAlpha_CLR),
 		.DAT_I(wBUS), .DAT_O(wBUS), .DAT_RAW_O(wRegAlpha_Raw)
 	);
+	
 	// RegBeta
 	cpu_regtemp uRegBeta(
 		.CLK1_I(CLK1_I), .CLK2_I(CLK2_I), .SYNC_I(SYNC_O), .nRST_I(nRST_I),
-		.RD_I(wRegBeta_RD), .WR_I(wRegBeta_WR),
+		.RD_I(wRegBeta_RD), .WR_I(wRegBeta_WR), .CLR_I(1'b0),
 		.DAT_I(wBUS), .DAT_O(wBUS), .DAT_RAW_O(wRegBeta_Raw)
 	);
+	
 	// IR
 	cpu_regtemp uRegIR(
 		.CLK1_I(CLK1_I), .CLK2_I(CLK2_I), .SYNC_I(SYNC_O), .nRST_I(nRST_I),
-		.RD_I(wRegIR_RD), .WR_I(wRegIR_WR),
+		.RD_I(1'b0), .WR_I(wRegIR_WR), .CLR_I(1'b0),
 		.DAT_I(wBUS), .DAT_O(), .DAT_RAW_O(wIR)
 	);
+	
 	// ALU
 	cpu_alu uALU(
 		.X_I(wRegAlpha_Raw), .Y_I(wRegBeta_Raw), .C_I(wStatus_C), .OP_I(wALU_OP),
@@ -186,7 +205,7 @@ module cpu(
 	// Status Register
 	cpu_status uStatus(
 		.CLK1_I(CLK1_I), .CLK2_I(CLK2_I), .SYNC_I(SYNC_O), .nRST_I(nRST_I),
-		.RD_I(wSEL_BusOut_Cond), .WR_I(wStatus_WR),
+		.RD_I(wCSI_BusOut_Cond), .WR_I(wStatus_WR),
 		.CF_I(wALU_C), .PF_I(wALU_P), .ZF_I(wALU_Z), .SF_I(wALU_S),
 		.CF_O(wStatus_C), .PF_O(wStatus_P), .ZF_O(wStatus_Z), .SF_O(wStatus_S), .BUS_O(wBUS)
 	);
@@ -242,6 +261,63 @@ module cpu(
 	// WAIT: 000
 	assign wStateWAIT = (~wState[2])&(~wState[1])&(~wState[0]);
 	
+	// Data Path
+	// PCL->DAT_O (T1)
+	assign wDP_PCL_OUT_T1			= ( wStateT1 & wCycleC1 ) |
+									  ( wStateT1 & wCycleC2 & ( wD_LRI | wD_LMI | wD_ALUI | wD_JMP_CAL ) ) 
+									  ( wStateT1 & wCycleC3 & ( wD_JMP_CAL ) );
+	// RegL->DAT_O (T1)
+	assign wDP_RegL_OUT_T1			= ( wStateT1 & wCycleC2 & ( wD_LMR | wD_ALUM ) ) |
+									  ( wStateT1 & wCycleC3 & wD_LMI );
+	// RegAlpha->DAT_O (T1)
+	assign wDP_RegAlpha_OUT_T1		= ( wStateT1 & wCycleC2 & ( wD_INP | wD_OUT ) );
+	// PCH->DAT_O (T2)
+	assign wDP_PCH_OUT_T2			= ( wStateT2 & wCycleC1 ) |
+									  ( wStateT2 & wCycleC2 & ( wD_LRI | wD_LMI | wD_ALUI | wD_JMP_CAL ) ) 
+									  ( wStateT2 & wCycleC3 & ( wD_JMP_CAL ) );
+	// RegH->DAT_O (T2)
+	assign wDP_RegH_OUT_T2			= ( wStateT2 & wCycleC2 & ( wD_LMR | wD_ALUM ) ) |
+									  ( wStateT2 & wCycleC3 & wD_LMI );
+	// RegBeta->DAT_O (T2)
+	assign wDP_RegBeta_OUT_T1		= ( wStateT2 & wCycleC2 & ( wD_INP | wD_OUT ) );
+	// DAT_I->IR (T3)
+	assign wDP_IN_IR_T3				= wStateT3 & wCycleC1;
+	// DAT_I->RegBeta (T3)
+	assign wDP_IN_RegBeta_T3		= ( wStateT3 & wCycleC1 ) |
+									  ( wStateT3 & wCycleC2 & ( (~wD_OUT) & (~wD_LMR) ) );
+	// DAT_I->RegAlpha (T3)
+	assign wDP_IN_RegAlpha_T3		= wStateT3 & wCycleC3 & (~wD_LMI);
+	// RegBeta->DAT_O (T3)
+	assign wDP_RegBeta_OUT_T3		= wStateT3 & wCycleC2 & wD_LMR;
+	// Status->DAT_O (T4)
+	assign wDP_Status_OUT_T4		= wStateT4 & wCycleC2 & wD_INP;
+	// RegSrc->RegBeta (T4)
+	assign wDP_RegSrc_RegBeta_T4	= wStateT4 & wCycleC1 & ( wD_LRR | wD_LMR | wD_ALUR );
+	// RegAlpha->PCH (T4)
+	assign wDP_RegAlpha_PCH_T4		= ( wStateT4 & wCycleC1 & wD_RST ) |
+									  ( wStateT4 & wCycleC3 & wD_JMP_CAL );
+	// RegBeta->RegDst (T5)
+	assign wDP_RegBeta_RegDst_T5	= ( wStateT5 & wCyclcC1 & wD_LRR ) |
+									  ( wStateT5 & wCycleC2 & ( wD_LRM | wD_LRI ) );
+	// ALU->RegDst (T5)
+	assign wDP_ALU_RegDst_T5		= ( wStateT5 & wCycleC1 & ( wD_ALU | wD_ROT ) ) |
+									  ( wStateT5 & wCycleC2 & ( wD_ALUM | wD_ALUI ) );
+	// RegBeta->PCL (T5)
+	assign wDP_RegBeta_PCL_T5		= ( wStateT5 & wCycleC1 & wD_RST ) |
+									  ( wStateT5 & wCycleC3 & wD_JMP_CAL );
+	// RegBeta->RegAlpha (T5)
+	assign wDP_RegBeta_RegAlpha_T5	= wStateT5 & wCycleC2 & wD_INP;
+									  
+	
+	
+	// RegBank->RegBeta (T4): LRR, LMR, ALU
+	assign wDP_RegBank_RegBeta_T4 	= wStateT4 & ( wD_LRR | wD_LMR | wD_ALU );
+	// RegBeta->RegBank (T5): LRR, LRM, LRI
+	assign wDP_RegBeta_RegBank_T5 	= wStateT5 & ( wD_LRR | wD_LRM | wD_LRI );
+	// ALU->RegAlpha (T5): ALUR, ALUM, ALUI
+	assign wDP_ALU_RegAlpha_T5		= wStateT5 & ( wD_ALUR | wD_ALUM | wD_ALUI );
+	
+	
 	// BUS Control
 	// PCL/PCH, RegL/RegH, RegAlpha, RegBeta, COND
 	assign wCSI_BusOut_PCL = (wCycleC1 & wStateT1) |
@@ -265,36 +341,47 @@ module cpu(
 	assign DAT_O = { 8{wBusOut} } & wBUS;
 	
 	// Stack Signal
-	assign wStack_RD = wCSI_BusOut_PCL | wCSI_BusOut_PCH;
+	assign wCSI_Stack = wCSI_BusOut_PCL | wCSI_BusOut_PCH;
 	assign wStack_HA = wCSI_BusOut_PCH;
 	assign wStack_INCR = wCSI_BusOut_PCH & (~SYNC_O);
 	
 	// RegBank Control
-	assign wRegBank_Src = wStateT4 & (wD_LRR | wD_LMR | wD_ALUR);
-	assign wRegBank_Dst = wStateT5 & (wD_LRR | wD_LRI | wD_LRM | wD_INC | wD_DCR);
-	assign wRegBank_DstA = wStateT5 & (wD_ALUR | wD_ALUM | wD_ALUI);
-	assign wRegBank_ADDR = ({ wCSI_BusOut_RegH, wCSI_BusOut_RegH, wCSI_BusOut_RegH } & 3'b101) |
-						   ({ wCSI_BusOut_RegL, wCSI_BusOut_RegL, wCSI_BusOut_RegL } & 3'b110) |
-						   ({ wRegBank_Src, wRegBank_Src, wRegBank_Src } & wIR[2:0] ) |
-						   ({ wRegBank_Dst, wRegBank_Dst, wRegBank_Dst } & wIR[5:3] ) |
-						   ({ wRegBank_DstA, wRegBank_DstA, wRegBank_DstA } & 3'b000 );
-	assign wRegBank_RD = wCSI_BusOut_RegL | wCSI_BusOut_RegH | wRegBank_Src;
-	assign wRegBank_WR = wRegBank_Dst | wRegBank_DstA;
+	assign wRegBank_Src  	= wStateT4 & (wD_LRR | wD_LMR | wD_ALUR);
+	assign wRegBank_Dst  	= wStateT5 & (wD_LRR | wD_LRI | wD_LRM | wD_INC | wD_DCR) & (|wsRegBank_ADDR) & (~(&wsRegBank_ADDR));
+	assign wRegBank_DstA 	= wStateT5 & (wD_LRR | wD_LRI | wD_LRM | wD_INC | wD_DCR) & (~(|wsRegBank_ADDR));
+	assugb wRegBank_DstALU	= wStateT5 & (wD_ALUR | wD_ALUM | wD_ALUI);
+	assign wsRegBank_ADDR 	= ( {3{wCSI_BusOut_RegH}} & 3'b101   ) |
+							  ( {3{wCSI_BusOut_RegL}} & 3'b110   ) |
+							  ( {3{wRegBank_Src}}     & wIR[2:0] ) |
+							  ( {3{wRegBank_Dst}}     & wIR[5:3] ) |
+							  ( {3{wRegBank_DstA}}    & 3'b000   ) |
+							  ( {3{wRegBank_DstALU}}  & 3'b000   );
+	assign wRegBank_RD   	= wCSI_BusOut_RegL | wCSI_BusOut_RegH | wRegBank_Src;
+	assign wRegBank_WR   	= wRegBank_Dst | wRegBank_DstA;
 	
 	// RegIR Control
 	assign wRegIR_RD = 1'b0;
 	assign wRegIR_WR = wCycleC1 & wStateT3;
 	
 	// RegAlpha Control
-	assign wRegAlpha_WR = ( wStateT5 & (wRegBank_DstA | (wRegBank_Dst&(~(|wRegBank_ADDR)))) ) |
-						  ( wCycleC3 & wStateT3 & SYNC_O );
+	/* IN:		RegBank_DstA (T5), J/C (T3C3), INP (T5C2)
+	 * OUT:		CSI_BusOut_RegAlpha, RET (T4C1), J/C (T4C3)
+	 * CLR:		RST (T3C1-)
+	 */
+	assign wRegAlpha_RD 	= ( wCSI_BusOut_RegAlpha ) |
+							  ( wCycleC1 & wStateT4 & SYNC_O & (wD_RET | wD_RETC) ) |
+							  ( wCycleC3 & wStateT4 & SYNC_O & wD_JMP_CAL );
+	assign wRegAlpha_WR  	= ( wStateT5 & wRegBank_DstA ) |
+							  ( wCycleC3 & wStateT3 & SYNC_O & wD_JMP_CAL ) |
+							  ( wCycleC2 & wStateT5 & SYNC_O & wD_INP );
+	assign wRegAlpha_CLR 	= ( wCycleC1 & wStateT3 & (~SYNC_O) & wD_RST );
 	
 	// RegBeta Control
-	assign wRegBeta_RD = (wStateT4 & wRegBank_Src) |
-						 (wStateT4 & (wD_LMI | wD_LRI | wD_LMI));
-	assign wRegBeta_WR = (wStateT4 & wRegBank_Src & SYNC_O) |
-						 (wCycleC1 & wStateT3 & SYNC_O) |
-						 (wCycleC2 & wStateT3 & SYNC_O & (~wD_OUT));
+	assign wCSI_RegBeta 	= wCSI_BusOut_RegBeta |
+							  (wStateT5 & (wRegBank_Dst | wRegBank_DstA) );
+	assign wRegBeta_WR 		= (wStateT4 & wRegBank_Src & SYNC_O) |
+							  (wCycleC1 & wStateT3 & SYNC_O) |
+							  (wCycleC2 & wStateT3 & SYNC_O & (~wD_OUT));
 	
 	// ALU Control
 	assign wALU_OP = {3{wD_ALUR|wD_ALUM|wD_ALUI}} & wIR[5:3];

@@ -26,7 +26,7 @@
 //
 module cpu_regtemp(
 	CLK1_I, CLK2_I, SYNC_I, nRST_I,
-	RD_I, WR_I,
+	RD_I, WR_I, CLR_I,
 	DAT_I, DAT_O, DAT_RAW_O
 );
 
@@ -38,7 +38,7 @@ module cpu_regtemp(
 	// DEFINE INPUT
 	// **********
 	input wire CLK1_I, CLK2_I, SYNC_I, nRST_I;
-	input wire RD_I, WR_I;
+	input wire RD_I, WR_I, CLR_I;
 	input wire [7:0] DAT_I;
 
 	// **********
@@ -63,7 +63,7 @@ module cpu_regtemp(
 	assign DAT_O = {8{RD_I}} & rTemp;
 	
 	always @(posedge CLK2_I) begin
-		if(~nRST_I)
+		if( (~nRST_I) | (CLR_I) )
 			rTemp <= 8'b0;
 		else if(WR_I)
 			rTemp <= DAT_I;

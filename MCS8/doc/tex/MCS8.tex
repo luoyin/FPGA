@@ -1,0 +1,91 @@
+\documentclass[10pt]{book}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{latexsym}
+\usepackage{ctex}
+\usepackage{mathdots}
+\usepackage{mathrsfs}
+\usepackage{longtable}
+\usepackage{supertabular}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{color, framed}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{threeparttable}
+\usepackage{graphicx}
+\usepackage{graphics}
+\usepackage{enumerate}
+\usepackage{footmisc}
+\usepackage{comment}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric}
+\usepackage{lscape}
+\usepackage[colorlinks]{hyperref}
+\usepackage{geometry}
+\setcounter{secnumdepth}{4}
+\geometry{left=2.0cm, right=2.0cm, top=2.0cm, bottom=2.0cm}
+
+\begin{document}
+
+\lstset{numbers=left, 
+	numberstyle= \tiny, 
+	keywordstyle= \color{ blue!70},
+	commentstyle=\color{red!50!green!50!blue!50},
+	frame=shadowbox, 
+	rulesepcolor= \color{ red!20!green!20!blue!20},
+	xleftmargin=-1em,
+	xrightmargin=-1em,
+	tabsize=4,
+	breaklines=true,
+    basicstyle=\small
+}
+
+\definecolor{shadecolor}{rgb}{0.92, 0.92, 0.92}
+
+\newcommand{\red}[1]{\textcolor[rgb]{1.0, 0.0, 0.0}{#1}}
+\newcommand{\green}[1]{\textcolor[rgb]{0.0, 1.0, 0.0}{#1}}
+\newcommand{\blue}[1]{\textcolor[rgb]{0.0, 0.0, 1.0}{#1}}
+\newcommand{\greenblue}[1]{\textcolor[rgb]{0.0, 1.0, 1.0}{#1}}
+\newcommand{\redB}[1]{\textcolor[rgb]{1.0, 0.0, 0.0}{\textbf{#1}}}
+\newcommand{\greenB}[1]{\textcolor[rgb]{0.0, 1.0, 0.0}{\textbf{#1}}}
+\newcommand{\blueB}[1]{\textcolor[rgb]{0.0, 0.0, 1.0}{\textbf{#1}}}
+\newcommand{\greenblueB}[1]{\textcolor[rgb]{0.0, 1.0, 1.0}{\textbf{#1}}}
+\newcommand{\mypath}[1]{/home/luoyin/Notes2016/ECG_Analysis/{#1}/}
+
+\title{Intel MCS8系统在FPGA上的实现}
+\author{罗胤}
+\date{2018-03}
+\maketitle
+
+\tableofcontents
+
+\chapter{CPU设计}
+\section{命令法则}
+\paragraph{模块约定}
+\begin{itemize}
+  \item 模块名均为小写
+  \item 模块引脚均为大写, 输入引脚使用\blue{\_I}后缀, 输出引脚使用\blue{\_O}后缀, 无双向引脚
+  \item 模块实例名以\blue{u}为前缀命名
+\end{itemize}
+
+\paragraph{信号约定}
+\begin{itemize}
+  \item 信号首字母小写, 第二字母大写, 其余字母按需求选择大小写
+  \item 寄存器信号使用\blue{r}前缀, 线型信号使用\blue{w}前缀, 多位信号在前缀后附加\blue{s}
+  \item 模块信号命令格式: 前缀-模块名-信号名
+\end{itemize}
+
+\section{模块组成}
+\subsection{寄存器组}
+\begin{itemize}
+  \item 模块名: cpu\_regbank
+  \item 总线接入: CPU内部wor总线
+\end{itemize}
+
+\section{信号通路}
+
+
+\end{document}
