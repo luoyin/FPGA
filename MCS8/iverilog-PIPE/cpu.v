@@ -77,29 +77,30 @@ module cpu(
 	reg [7:0] rF3_IR;
 	reg rF3_IR_valid;
 	// State D
-	reg rD_valid;
-	reg [4:0]  rD_icode;
-	reg [3:0]  rD_ifun;
-	reg [2:0]  rD_srcR;
-	reg [2:0]  rD_dstR;
-	reg [7:0]  rD_valC;
-	reg [13:0] rD_valP;
+	reg        	rD_valid;
+	reg  [4:0] 	rD_icode;
+	reg  [3:0] 	rD_ifun;
+	reg  [2:0] 	rD_srcR;
+	reg  [2:0] 	rD_dstR;
+	reg  [7:0] 	rD_valC;
+	reg [13:0] 	rD_valP;
+	reg  [1:0] 	rD_count;
 	// Stage E
 	reg rE_valid;
-	reg [4:0]  rE_icode;
-	reg [3:0]  rE_ifun;
-	reg [2:0]  rE_srcR;
-	reg [2:0]  rE_dstR;
-	reg [7:0]  rE_valC;
-	reg [13:0] rE_valP;
-	reg [7:0]  rE_valS;
-	reg [7:0]  rE_valH;
-	reg [7:0]  rE_valL;
+	reg  [4:0] 	rE_icode;
+	reg  [3:0] 	rE_ifun;
+	reg  [2:0] 	rE_dstR;
+	reg  [7:0]	rE_valA;
+	reg  [7:0]	rE_valS;
+	reg  [7:0] 	rE_valC;
+	reg [13:0] 	rE_valP;
+	reg  [7:0] 	rE_valH;
+	reg  [7:0] 	rE_valL;
 	// Stage M
 	reg rM_valid;
-	reg [4:0]  rM_icode;
-	reg [2:0]  rM_dstR;
-	reg [7:0]  rM_valE;
+	reg  [4:0] rM_icode;
+	reg  [2:0] rM_dstR;
+	reg  [7:0] rM_valE;
 	// Stage W
 	
 	// Stack
@@ -108,11 +109,17 @@ module cpu(
 	// RegBank
 	reg [7:0] rRegBank[7:0];
 	
+	wire wDoubleByte;
+	wire wTripleByte;
+	
 	// **********
 	// INSTANCE MODULE
 	// **********
 	assign I_ADDR_O = rStack[rStack_ndx];
-
+	assign wDoubleByte = (~rF3_IR[7])&(~rF3_IR[6])&( rF3_IR[2])&(~rF3_IR[0]);
+	assign wTripleByte = (~rF3_IR[7])&( rF3_IR[6])&(~rF3_IR[0]);
+	assign wSingle = (~wDoubleByte) & (~wTripleByte);
+	
 	// **********
 	// MAIN CODE
 	// **********
@@ -164,19 +171,31 @@ module cpu(
 			rD_valid <= 1'b0;
 			rD_icode <= 5'b0;
 			rD_ifun  <= 4'b0;
-			rD_srcR  <= 3'b0;
 			rD_dstR  <= 3'b0;
+			rD_srcR  <= 3'b0;
 			rD_valC  <= 8'b0;
 			rD_valP  <= 14'b0;
+			rD_count <= 2'b0;
 			end
 		else begin
-			if(rF3_IR_valid) begin
+			if((~rD_count[1])&(~rD_count[0])) begin
 				rD_icode <= { rF3_IR[7], rF3_IR[6], rF3_IR[2], rF3_IR[1], rF3_IR[0] };
-				rD_ifun <= { rF3_IR[5], rF3_IR[4], rF3_IR[3] };
-				rD_srcR <= rF1_IR[2:0];
-				rD_dstR <= rF1_IR[5:3];
-				rD_valC <= rF2_IR;
-				rD_valP <= { rF1_IR[5:0], rF2_IR };
+				rD_ifun  <= { (~rF3_IR[2])&( rF3_IR[1])&(~rF3_IR[0]), rF3_IR[5], rF3_IR[4], rF3_IR[3] };
+				rD_srcR  <= rF3_IR[2:0];
+				rD_dstR  <= rF3_IR[5:3];
+				rD_valC  <= rF2_IR;
+				rD_valP  <= { rF1_IR[5:0], rF2_IR };
+				rD_valid <= rF3_IR_valid;
+				if(wDoubleByte)
+					rD_count <= 1;
+				else if(wTripleByte)
+					rD_count <= 2;
+				else
+					rD_count <= 0;
+				end
+			else begin
+				rD_count <= rD_count-1;
+				rD_valid <= 1'b0;
 				end
 			end
 		end
@@ -187,18 +206,29 @@ module cpu(
 			rE_valid <= 1'b0;
 			rE_icode <= 5'b0;
 			rE_ifun  <= 4'b0;
-			rE_srcR  <= 3'b0;
 			rE_dstR  <= 3'b0;
 			rE_valC  <= 8'b0;
 			rE_valP  <= 14'b0;
 			end
 		else begin
+			rE_valid <= rD_valid;
 			rE_icode <= rD_icode;
 			rE_ifun  <= rD_ifun;
-			rE_srcR  <= rD_srcR;
 			rE_dstR  <= rD_dstR;
 			rE_valC  <= rD_valC;
 			rE_valP  <= rD_valP;
+			
+			// valA
+			
+			// valS
+			casex(rD_icode)
+				5'b00110: begin
+					rE_valS <= rD_valC;
+					end
+				default: begin
+					rE_valS <= 8'b0;
+					end
+				endcase
 			end
 		end
 		

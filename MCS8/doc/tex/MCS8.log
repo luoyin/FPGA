@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.99992 (TeX Live 2015/TeX Live for SUSE Linux) (preloaded format=xelatex 2017.5.2)  10 APR 2018 13:49
+This is XeTeX, Version 3.14159265-2.6-0.99992 (TeX Live 2015/TeX Live for SUSE Linux) (preloaded format=xelatex 2017.5.2)  18 APR 2018 15:39
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1991,21 +1991,25 @@ LaTeX Font Info:    Font shape `EU1/SimSun(0)/m/sl' in size <10> not available
 
 ]
 Chapter 1.
-[5]
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 91.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 91.
+[5] [6
+
+]
+Chapter 2.
+[7]
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 95.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 95.
  (./MCS8.aux)
-Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 91.
-Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 91.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 91.
+Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 95.
+Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 95.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 95.
  ) 
 Here is how much of TeX's memory you used:
- 39256 strings out of 493708
- 767955 string characters out of 6152935
- 783194 words of memory out of 5000000
- 42054 multiletter control sequences out of 15000+600000
+ 39255 strings out of 493708
+ 767942 string characters out of 6152935
+ 783110 words of memory out of 5000000
+ 42053 multiletter control sequences out of 15000+600000
  12201 words of font info for 82 fonts, out of 8000000 for 9000
  1328 hyphenation exceptions out of 8191
  63i,6n,78p,10431b,359s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on MCS8.pdf (5 pages).
+Output written on MCS8.pdf (7 pages).
