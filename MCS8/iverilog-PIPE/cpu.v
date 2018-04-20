@@ -85,6 +85,8 @@ module cpu(
 	reg  [7:0] 	rD_valC;				// imm
 	reg [13:0] 	rD_valP;
 	reg  [1:0] 	rD_count;
+	wire		wD_INS_NOP;
+	wire [7:0]	wD_forward;
 	// ***** Stage E
 	reg 		rE_valid;
 	reg  [7:0] 	rE_icode;
@@ -98,38 +100,55 @@ module cpu(
 	reg  [7:0] 	rE_valC;				// imm
 	reg  [7:0]	rE_valS;				// reg, input B of ALU
 	reg  [7:0]	rE_valA;				// input A of ALU
+	// control
+	wire		wE_dstR_CS;				// ->reg
+	wire		wE_dstR_CS_C;			// imm->reg
+	wire		wE_dstR_CS_S;			// reg->reg
+	wire		wE_dstR_CS_E;			// alu->reg
+	wire		wE_dstR_CS_M;			// M->reg
+	wire		wE_dstM_CS;				// ->M
+	wire		wE_dstM_CS_C;			// imm->M
+	wire		wE_dstM_CS_S;			// reg->M
 	// ***** Stage M *****
 	reg 		rM_valid;
 	reg  [7:0] 	rM_icode;
-	reg  [2:0] 	rM_dstR;
+	reg  [2:0] 	rM_dst;
 	reg  [7:0] 	rM_valC;				// imm
 	reg  [7:0] 	rM_valS;				// reg
 	reg  [7:0] 	rM_valE;				// alu
-	wire		wM_dstM_CS;				// ->M
-	wire		wM_dstM_CS_C;			// imm->M
-	wire		wM_dstM_CS_S;			// reg->M
+	// control
+	reg			rM_dstR_CS;
+	reg			rM_dstR_CS_C;			// imm->reg
+	reg			rM_dstR_CS_S;			// reg->reg
+	reg			rM_dstR_CS_E;			// alu->reg
+	reg			rM_dstR_CS_M;			// M->reg
+	reg			rM_dstM_CS;				// ->M
+	reg			rM_dstM_CS_C;			// imm->M
+	reg			rM_dstM_CS_S;			// reg->M
 	reg [13:0] 	rM_valP;
 	reg [13:0] 	rM_addrM;
 	reg  [4:0] 	rM_addrIO;
 	// Stage W
 	reg 		rW_valid;
 	reg  [7:0] 	rW_icode;
-	reg  [2:0] 	rW_dstR;
+	reg  [2:0] 	rW_dst;
 	reg  [7:0] 	rW_valC;				// imm
 	reg  [7:0] 	rW_valS;				// reg
 	reg  [7:0] 	rW_valE;				// alu
 	reg  [7:0] 	rW_valM;				// mem
-	wire		wW_dstR_CS;				// ->reg
-	wire		wW_dstR_CS_C;			// imm->reg
-	wire		wW_dstR_CS_S;			// reg->reg
-	wire		wW_dstR_CS_E;			// alu->reg
-	wire		wW_dstR_CS_M;			// mem->reg
+	reg			rW_dstR_CS;				// ->reg
+	reg			rW_dstR_CS_C;			// imm->reg
+	reg			rW_dstR_CS_S;			// reg->reg
+	reg			rW_dstR_CS_E;			// alu->reg
+	reg			rW_dstR_CS_M;			// mem->reg
+	wire [7:0]	wW_dstVal;
 	reg [13:0] 	rW_valP;
 	// Stack
 	reg [13:0] rStack[7:0];
 	reg [2:0] rStack_ndx;
 	// RegBank
 	reg [7:0] rRegBank[7:0];
+	reg [7:0] rTest;
 	
 	wire wDoubleByte;
 	wire wTripleByte;
@@ -145,31 +164,50 @@ module cpu(
 	assign wSingle = (~wDoubleByte) & (~wTripleByte);
 	assign wINS_NOP = (~rF3_IR[7])&(~rF3_IR[6])&(~rF3_IR[5])&(~rF3_IR[4])&(~rF3_IR[3])&(~rF3_IR[2])&(~rF3_IR[1]);
 	
-	// **** Stage M ****
+	// **** Stage D ****
+	// NOP
+	assign wD_INS_NOP = ~(|rD_icode[7:1]); 
+	
+	// **** Stage E ****
 	// src select
-	// LMI
-	assign wM_dstM_CS_C = (~rM_icode[7])&(~rM_icode[6])&(&rM_icode[5:3])&( rM_icode[2])&( rM_icode[1])&(~rM_icode[0]);		// LMI
-	// LMr
-	assign wM_dstM_CS_S = ( rM_icode[7])&( rM_icode[6])&(&rM_icode[5:3])&(~(&rM_icode[2:0]));								// LMr
+	// LrI: 00DDD110
+	assign wE_dstR_CS_C = (~rE_icode[7])&(~rE_icode[6])&(~(&rE_icode[5:3]))&( rE_icode[2])&( rE_icode[1])&(~rE_icode[0]);	// LrI
+	// Lrr: 11DDDSSS
+	assign wE_dstR_CS_S = ( rE_icode[7])&( rE_icode[6])&(~(&rE_icode[5:3]))&(~(&rE_icode[2:0]));							// Lrr
+	// LrM: 11DDD111
+	assign wE_dstR_CS_M = ( rE_icode[7])&( rE_icode[6])&(~(&rE_icode[5:3]))&(&rE_icode[2:0]);								// Lrr
+	// INr/DCr/ALUr/ALUI/ROT
+	// INr/DCr: 00DDD00x
+	assign wE_dstR_CS_E = ( (~rE_icode[7]) & (~rE_icode[6]) & (~(&rE_icode[5:3])) & (~(|rE_icode[5:3])) & (~rE_icode[2]) & (~rE_icode[1]) ) |		// INr/DCr: 00DDD00x
+						  ( ( rE_icode[7]) & (~rE_icode[6]) & (~(&rE_icode[2:0])) ) | 																// ALUr: 10PPPSSS
+						  ( (~rE_icode[7]) & (~rE_icode[6]) & ( rE_icode[2]) & (~rE_icode[1]) & (~rE_icode[0]) ) |									// ALUI: 00PPP100
+						  ( (~rE_icode[7]) & (~rE_icode[6]) & (~rE_icode[5]) & (~rE_icode[2]) & ( rE_icode[1]) & (~rE_icode[0]) );					// ROT:  000RR010
 	// dst control
-	assign wM_dstM_CS = wM_dstM_CS_C | wM_dstM_CS_S;
+	assign wE_dstR_CS = wE_dstR_CS_C | wE_dstR_CS_S | wE_dstR_CS_M | wE_dstR_CS_E;
+	cpu_forward uForward(
+		.REG_BANK_I(rRegBank[rD_src]), .REG_SRC_I(rD_src),
+		.M_VAL_C_I(rM_valC), .M_VAL_S_I(rM_valS), .M_VAL_E_I(rM_valE),
+		.W_VAL_C_I(rW_valC), .W_VAL_S_I(rW_valS), .W_VAL_E_I(rW_valE), .W_VAL_M_I(rW_valM),
+		.M_DST_I(rM_dst), .M_VALID_I(rM_valid), .M_DSTR_CS_I(rM_dstR_CS), .M_DSTR_CS_C_I(rM_dstR_CS_C), .M_DSTR_CS_S_I(rM_dstR_CS_S), .M_DSTR_CS_E_I(rM_dstR_CS_E),
+		.W_DST_I(rW_dst), .W_VALID_I(rW_valid), .W_DSTR_CS_I(rW_dstR_CS), .W_DSTR_CS_C_I(rW_dstR_CS_C), .W_DSTR_CS_S_I(rW_dstR_CS_S), .W_DSTR_CS_E_I(rW_dstR_CS_E), .W_DSTR_CS_M_I(rW_dstR_CS_M),
+		.REG_BANK_O(wD_forward)
+	);
+	
+	// LMI
+	assign wE_dstM_CS_C = (~rE_icode[7])&(~rE_icode[6])&(&rE_icode[5:3])&( rE_icode[2])&( rE_icode[1])&(~rE_icode[0]);		// LMI
+	// LMr
+	assign wE_dstM_CS_S = ( rE_icode[7])&( rE_icode[6])&(&rE_icode[5:3])&(~(&rE_icode[2:0]));								// LMr
+	// dst control
+	assign wE_dstM_CS = wE_dstM_CS_C | wE_dstM_CS_S;
 	
 	// **** Stage W ****
 	// src select
-	// LrI: 00DDD110
-	assign wW_dstR_CS_C = (~rW_icode[7])&(~rW_icode[6])&(~(&rW_icode[5:3]))&( rW_icode[2])&( rW_icode[1])&(~rW_icode[0]);	// LrI
-	// Lrr: 11DDDSSS
-	assign wW_dstR_CS_S = ( rW_icode[7])&( rW_icode[6])&(~(&rW_icode[5:3]))&(~(&rW_icode[2:0]));							// Lrr
-	// LrM: 11DDD111
-	assign wW_dstR_CS_M = ( rW_icode[7])&( rW_icode[6])&(~(&rW_icode[5:3]))&(&rW_icode[2:0]);								// Lrr
-	// INr/DCr/ALUr/ALUI/ROT
-	// INr/DCr: 00DDD00x
-	assign wW_dstR_CS_E = ( (~rW_icode[7]) & (~rW_icode[6]) & (~(&rW_icode[5:3])) & (~(|rW_icode[5:3])) & (~rW_icode[2]) & (~rW_icode[1]) ) |		// INr/DCr: 00DDD00x
-						  ( ( rW_icode[7]) & (~rW_icode[6]) & (~(&rW_icode[2:0])) ) | 																// ALUr: 10PPPSSS
-						  ( (~rW_icode[7]) & (~rW_icode[6]) & ( rW_icode[2]) & (~rW_icode[1]) & (~rW_icode[0]) ) |									// ALUI: 00PPP100
-						  ( (~rW_icode[7]) & (~rW_icode[6]) & (~rW_icode[5]) & (~rW_icode[2]) & ( rW_icode[1]) & (~rW_icode[0]) );					// ROT:  000RR010
-	// dst control
-	assign wW_dstR_CS = wW_dstR_CS_C | wW_dstR_CS_S | wW_dstR_CS_M | wW_dstR_CS_E;
+	
+	// dstVal
+	assign wW_dstVal = ( {8{rW_dstR_CS_C}} & rW_valC ) |
+					( {8{rW_dstR_CS_S}} & rW_valS ) |
+					( {8{rW_dstR_CS_M}} & rW_valM ) |
+					( {8{rW_dstR_CS_E}} & rW_valE );
 	
 	// **********
 	// MAIN CODE
@@ -276,33 +314,37 @@ module cpu(
 				
 				// valA
 				casex(rD_icode)
-					5'b0000x: begin			// INr, DCr
-						rE_valA <= rRegBank[rD_dst];
+					8'b00xxx00x: begin			// INr, DCr
+						if(~wD_INS_NOP)
+							rE_valA <= rRegBank[rD_dst];
 						end
-					5'b00010: begin			// ROT
+					8'b000xx010: begin			// ROT
 						rE_valA <= rRegBank[3'b000];
 						end
-					5'b00100: begin			// ALUI
+					8'b00xxx100: begin			// ALUI
 						rE_valA <= rRegBank[3'b000];
 						end
-					5'b10xxx: begin			// ALUr
+					8'b10xxxxxx: begin			// ALUr
 						rE_valA <= rRegBank[rD_src];
 						end
 					endcase
 				
 				// valS
 				casex(rD_icode)
-					5'b00000: begin
+					8'b00xxx000: begin
 						rE_valS <= 8'b00000001;
 						end
-					5'b00001: begin
+					8'b00xxx001: begin
 						rE_valS <= 8'b11111111;
 						end
-					5'b00100: begin
+					8'b00xxx100: begin
 						rE_valS <= rD_valC;
 						end
-					5'b00110: begin
+					8'b00xxx110: begin
 						rE_valS <= rD_valC;
+						end
+					8'b11xxxxxx: begin
+						rE_valS <= rRegBank[rD_src];
 						end
 					default: begin
 						rE_valS <= 8'b0;
@@ -324,14 +366,23 @@ module cpu(
 			rM_valC			<= 8'b0;
 			rM_valS			<= 8'b0;
 			rM_valE			<= 8'b0;
+			rM_dst			<= 8'b0;
 			end
 		else begin
 			rM_valid		<= rE_valid;
 			if(rE_valid) begin
 				rM_icode	<= rE_icode;
 				rM_valC		<= rE_valC;
-				// dst control
-				
+				rM_dst		<= rE_dst;
+				// src/dst control
+				rM_dstR_CS		<= wE_dstR_CS;
+				rM_dstR_CS_C	<= wE_dstR_CS_C;
+				rM_dstR_CS_S	<= wE_dstR_CS_S;
+				rM_dstR_CS_E	<= wE_dstR_CS_E;
+				rM_dstR_CS_M	<= wE_dstR_CS_M;
+				rM_dstM_CS		<= wE_dstM_CS;
+				rM_dstM_CS_C	<= wE_dstM_CS_C;
+				rM_dstM_CS_S	<= wE_dstM_CS_S;
 				end
 			end
 		end
@@ -346,11 +397,20 @@ module cpu(
 			rW_valS			<= 8'b0;
 			rW_valE			<= 8'b0;
 			rW_valM			<= 8'b0;
+			rW_dst			<= 8'b0;
 			end
 		else begin
 			rW_valid		<= rM_valid;
 			if(rM_valid) begin
 				rW_icode	<= rM_icode;
+				rW_valC		<= rM_valC;
+				rW_dst		<= rM_dst;
+				// src/dst control
+				rW_dstR_CS		<= rM_dstR_CS;
+				rW_dstR_CS_C	<= rM_dstR_CS_C;
+				rW_dstR_CS_S	<= rM_dstR_CS_S;
+				rW_dstR_CS_E	<= rM_dstR_CS_E;
+				rW_dstR_CS_M	<= rM_dstR_CS_M;
 				end
 			end
 		end
@@ -372,6 +432,12 @@ module cpu(
 		else begin
 			rF1_IR <= I_DAT_I;
 			rF1_IR_valid <= 1'b1;
+			if(rW_valid) begin
+				if(rW_dstR_CS) begin
+					rRegBank[rW_dst] <= wW_dstVal;
+					rTest <= wW_dstVal;
+					end
+				end
 			end
 		end
 	

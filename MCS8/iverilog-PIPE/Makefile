@@ -1,5 +1,5 @@
-all: bench_top.v bench_clock.v cpu.v rom.v
-	iverilog bench_top.v bench_clock.v cpu.v rom.v -o bench_top
+all: bench_top.v bench_clock.v cpu.v cpu_forward.v rom.v
+	iverilog bench_top.v bench_clock.v cpu.v cpu_forward.v rom.v -o bench_top
 
 clean: bench_top dump.vcd
 	rm -f bench_top dump.vcd
