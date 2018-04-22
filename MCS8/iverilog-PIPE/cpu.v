@@ -87,7 +87,7 @@ module cpu(
 	reg  [1:0] 	rD_count;
 	wire		wD_INS_NOP;
 	wire [7:0]	wD_forward;
-	// ***** Stage E
+	// ***** Stage E *****
 	reg 		rE_valid;
 	reg  [7:0] 	rE_icode;
 	reg  [3:0] 	rE_ifun;
@@ -128,7 +128,7 @@ module cpu(
 	reg [13:0] 	rM_valP;
 	reg [13:0] 	rM_addrM;
 	reg  [4:0] 	rM_addrIO;
-	// Stage W
+	// ***** Stage W *****
 	reg 		rW_valid;
 	reg  [7:0] 	rW_icode;
 	reg  [2:0] 	rW_dst;
@@ -186,11 +186,21 @@ module cpu(
 	assign wE_dstR_CS = wE_dstR_CS_C | wE_dstR_CS_S | wE_dstR_CS_M | wE_dstR_CS_E;
 	cpu_forward uForward(
 		.REG_BANK_I(rRegBank[rD_src]), .REG_SRC_I(rD_src),
+		.E_VAL_C_I(rE_valC), .E_VAL_S_I(rE_valS),
 		.M_VAL_C_I(rM_valC), .M_VAL_S_I(rM_valS), .M_VAL_E_I(rM_valE),
 		.W_VAL_C_I(rW_valC), .W_VAL_S_I(rW_valS), .W_VAL_E_I(rW_valE), .W_VAL_M_I(rW_valM),
-		.M_DST_I(rM_dst), .M_VALID_I(rM_valid), .M_DSTR_CS_I(rM_dstR_CS), .M_DSTR_CS_C_I(rM_dstR_CS_C), .M_DSTR_CS_S_I(rM_dstR_CS_S), .M_DSTR_CS_E_I(rM_dstR_CS_E),
+		.E_DST_I(rE_dst), .E_VALID_I(rE_valid), .E_DSTR_CS_I(wE_dstR_CS), .E_DSTR_CS_C_I(wE_dstR_CS_C), .E_DSTR_CS_S_I(wE_dstR_CS_S),
+		.E_DSTR_CS_E_I(wE_dstR_CS_E), .E_DSTR_CS_M_I(wE_dstR_CS_M),
+		.M_DST_I(rM_dst), .M_VALID_I(rM_valid), .M_DSTR_CS_I(rM_dstR_CS), .M_DSTR_CS_C_I(rM_dstR_CS_C), .M_DSTR_CS_S_I(rM_dstR_CS_S), .M_DSTR_CS_E_I(rM_dstR_CS_E), .M_DSTR_CS_M_I(rM_dstR_CS_M),
 		.W_DST_I(rW_dst), .W_VALID_I(rW_valid), .W_DSTR_CS_I(rW_dstR_CS), .W_DSTR_CS_C_I(rW_dstR_CS_C), .W_DSTR_CS_S_I(rW_dstR_CS_S), .W_DSTR_CS_E_I(rW_dstR_CS_E), .W_DSTR_CS_M_I(rW_dstR_CS_M),
 		.REG_BANK_O(wD_forward)
+	);
+	cpu_bubble_data uBubbleData(
+		.REG_SRC_I(rD_src), .REG_SRC_CS_I,
+		.E_DST_I(rE_dst), .E_VALID_I(rE_valid), .E_DSTR_CS_I(wE_dstR_CS), .E_DSTR_CS_C_I(wE_dstR_CS_C), .E_DSTR_CS_S_I(wE_dstR_CS_S), .E_DSTR_CS_E_I(wE_dstR_CS_E), .E_DSTR_CS_M_I(wE_dstR_CS_M),
+		.M_DST_I(rM_dst), .M_VALID_I(rM_valid), .M_DSTR_CS_I(rM_dstR_CS), .M_DSTR_CS_C_I(rM_dstR_CS_C), .M_DSTR_CS_S_I(rM_dstR_CS_S), .M_DSTR_CS_E_I(rM_dstR_CS_E), .M_DSTR_CS_M_I(rM_dstR_CS_M),
+		.W_DST_I(rW_dst), .W_VALID_I(rW_valid), .W_DSTR_CS_I(rW_dstR_CS), .W_DSTR_CS_C_I(rW_dstR_CS_C), .W_DSTR_CS_S_I(rW_dstR_CS_C), .W_DSTR_CS_E_I(rW_dstR_CS_E), .W_DSTR_CS_M_I(rW_dstR_CS_M),
+		.BUBBLE_DATA_O()
 	);
 	
 	// LMI
