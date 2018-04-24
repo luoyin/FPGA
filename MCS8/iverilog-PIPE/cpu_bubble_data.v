@@ -81,6 +81,8 @@ module cpu_bubble_data(
 	assign wE_Enable = (~(|(E_DST_I ^ REG_SRC_I))) & E_VALID_I;
 	assign wM_Enable = (~(|(M_DST_I ^ REG_SRC_I))) & M_VALID_I;
 	assign wW_Enable = (~(|(W_DST_I ^ REG_SRC_I))) & W_VALID_I;
+	assign BUBBLE_DATA_O = (wE_Enable & (E_DSTR_CS_E_I | E_DSTR_CS_M_I)) |
+						   (wM_Enable & (M_DSTR_CS_M_I));
 
 	// **********
 	// MAIN CODE
