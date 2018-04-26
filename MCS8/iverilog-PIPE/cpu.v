@@ -82,40 +82,69 @@ module cpu(
 	reg  [3:0] 	rD_ifun;
 	reg  [2:0] 	rD_src;
 	reg  [2:0] 	rD_dst;
-	reg  [7:0] 	rD_valC;				// imm
 	reg [13:0] 	rD_valP;
+	reg  [7:0] 	rD_valC;				// imm
 	reg  [1:0] 	rD_count;
 	wire		wD_INS_NOP;
-	wire [7:0]	wD_forward;
+	wire		wD_INS_INC;
+	wire		wD_INS_DCR;
+	wire		wD_INS_ALUR;
+	wire		wD_INS_ALUI;
+	wire		wD_INS_ROT;
+	wire 		wD_INS_LRR;
+	wire		wD_INS_LRM;
+	wire		wD_INS_LMR;
+	wire		wD_INS_LRI;
+	wire		wD_INS_LMI;
+	wire [7:0]	wD_forward_S;
+	wire [7:0]	wD_forward_A;
+	wire [7:0]	wD_forward_H;
+	wire [7:0]	wD_forward_L;
+	wire		wD_RegSrc_CS_S;
+	wire		wD_RegSrc_CS_A;
+	wire		wD_Bubble_S;
+	wire		wD_Bubble_A;
+	wire		wD_dstR_CS;				// ->reg
+	wire		wD_dstR_CS_C;			// imm->reg
+	wire		wD_dstR_CS_S;			// reg->reg
+	wire		wD_dstR_CS_E;			// alu->reg
+	wire		wD_dstR_CS_M;			// M->reg
+	wire		wD_dstM_CS;				// ->M
+	wire		wD_dstM_CS_C;			// imm->M
+	wire		wD_dstM_CS_S;			// reg->M
 	// ***** Stage E *****
 	reg 		rE_valid;
 	reg  [7:0] 	rE_icode;
 	reg  [3:0] 	rE_ifun;
 	reg  [2:0] 	rE_src;
 	reg  [2:0] 	rE_dst;
-	reg [13:0] 	rE_valP;
-	reg [13:0] 	rE_addrM;
 	reg  [4:0] 	rE_addrIO;
 	// src
+	reg [13:0]	rE_valP;
 	reg  [7:0] 	rE_valC;				// imm
 	reg  [7:0]	rE_valS;				// reg, input B of ALU
 	reg  [7:0]	rE_valA;				// input A of ALU
+	reg  [7:0]	rE_valH;
+	reg  [7:0]	rE_valL;
 	// control
-	wire		wE_dstR_CS;				// ->reg
-	wire		wE_dstR_CS_C;			// imm->reg
-	wire		wE_dstR_CS_S;			// reg->reg
-	wire		wE_dstR_CS_E;			// alu->reg
-	wire		wE_dstR_CS_M;			// M->reg
-	wire		wE_dstM_CS;				// ->M
-	wire		wE_dstM_CS_C;			// imm->M
-	wire		wE_dstM_CS_S;			// reg->M
+	reg			rE_dstR_CS;				// ->reg
+	reg			rE_dstR_CS_C;			// imm->reg
+	reg			rE_dstR_CS_S;			// reg->reg
+	reg			rE_dstR_CS_E;			// alu->reg
+	reg			rE_dstR_CS_M;			// M->reg
+	reg			rE_dstM_CS;				// ->M
+	reg			rE_dstM_CS_C;			// imm->M
+	reg			rE_dstM_CS_S;			// reg->M
 	// ***** Stage M *****
 	reg 		rM_valid;
 	reg  [7:0] 	rM_icode;
 	reg  [2:0] 	rM_dst;
+	reg [13:0] 	rM_valP;
 	reg  [7:0] 	rM_valC;				// imm
 	reg  [7:0] 	rM_valS;				// reg
 	reg  [7:0] 	rM_valE;				// alu
+	reg  [7:0]	rM_valH;
+	reg  [7:0]	rM_valL;
 	// control
 	reg			rM_dstR_CS;
 	reg			rM_dstR_CS_C;			// imm->reg
@@ -125,13 +154,12 @@ module cpu(
 	reg			rM_dstM_CS;				// ->M
 	reg			rM_dstM_CS_C;			// imm->M
 	reg			rM_dstM_CS_S;			// reg->M
-	reg [13:0] 	rM_valP;
-	reg [13:0] 	rM_addrM;
 	reg  [4:0] 	rM_addrIO;
 	// ***** Stage W *****
 	reg 		rW_valid;
 	reg  [7:0] 	rW_icode;
 	reg  [2:0] 	rW_dst;
+	reg [13:0] 	rW_valP;
 	reg  [7:0] 	rW_valC;				// imm
 	reg  [7:0] 	rW_valS;				// reg
 	reg  [7:0] 	rW_valE;				// alu
@@ -142,7 +170,6 @@ module cpu(
 	reg			rW_dstR_CS_E;			// alu->reg
 	reg			rW_dstR_CS_M;			// mem->reg
 	wire [7:0]	wW_dstVal;
-	reg [13:0] 	rW_valP;
 	// Stack
 	reg [13:0] rStack[7:0];
 	reg [2:0] rStack_ndx;
@@ -166,41 +193,89 @@ module cpu(
 	
 	// **** Stage D ****
 	// NOP
-	assign wD_INS_NOP = ~(|rD_icode[7:1]); 
+	assign wD_INS_NOP 	= ~(|rD_icode[7:1]); 
+	// INC: 00DDD000
+	assign wD_INS_INC 	= (~rD_icode[7]) & (~rD_icode[6]) & (~(|rD_icode[5:3])) & (~(&rD_icode[5:3])) & (~rD_icode[2]) & (~rD_icode[1]) & (~rD_icode[0]);
+	// DCR: 00DDD001
+	assign wD_INS_INC 	= (~rD_icode[7]) & (~rD_icode[6]) & (~(|rD_icode[5:3])) & (~(&rD_icode[5:3])) & (~rD_icode[2]) & (~rD_icode[1]) & ( rD_icode[0]);
+	// ALUR: 10xxxSSS
+	assign wD_INS_ALUR 	= ( rD_icode[7]) & (~rD_icode[6]) & (~(&rD_icode[2:0]));
+	// ALUI: 00xxx100
+	assign wD_INS_ALUI 	= (~rD_icode[7]) & (~rD_icode[6]) & (~rD_icode[2]) & (~rD_icode[1]) & (~rD_icode[0]);
+	// LRR: 11DDDSSS
+	assign wD_INS_LRR 	= ( rD_icode[7]) & ( rD_icode[6]) & (~(&rD_icode[5:3])) & (~(&rD_icode[2:0]));
+	// LRM: 11DDD111
+	assign wD_INS_LRM	= ( rD_icode[7]) & ( rD_icode[6]) & (~(&rD_icode[5:3])) & (&rD_icode[2:0]);
+	// LMR: 11111SSS
+	assign wD_INS_LMR 	= ( rD_icode[7]) & ( rD_icode[6]) & (&rD_icode[5:3])    & (~(&rD_icode[2:0]));
+	// LRI: 00DDD110
+	assign wD_INS_LRI	= (~rD_icode[7]) & (~rD_icode[6]) & (~(&rD_icode[5:3])) & ( rD_icode[2]) & ( rD_icode[1]) & (~rD_icode[0]);
+	// LMI: 00111110
+	assign wD_INS_LMI	= (~rD_icode[7]) & (~rD_icode[6]) & (&rD_icode[5:3])    & ( rD_icode[2]) & ( rD_icode[1]) & (~rD_icode[0]);
+	
+	assign wD_RegSrc_CS_A = wD_INS_ALUR | wD_INS_ALUI;
+	assign wD_RegSrc_CS_S = wD_INS_ALUR | wD_INS_LRR | wD_INS_LMR;
+	assign wD_dstR_CS_C	= wD_INS_LRI;
+	assign wD_dstR_CS_S	= wD_INS_LRR;
+	assign wD_dstR_CS_E	= wD_INS_ALUR | wD_INS_ALUI | wD_INS_ROT;
+	assign wD_dstR_CS_M	= wD_INS_LRM;
+	assign wD_dstR_CS  	= wD_dstR_CS_C | wD_dstR_CS_S | wD_dstR_CS_E | wD_dstR_CS_M;
+	assign wD_dstM_CS_C	= wD_INS_LMI;
+	assign wD_dstM_CS_S	= wD_INS_LMR;
+	assign wD_dstM_CS	= wD_dstM_CS_C | wD_dstR_CS_S;
 	
 	// **** Stage E ****
-	// src select
-	// LrI: 00DDD110
-	assign wE_dstR_CS_C = (~rE_icode[7])&(~rE_icode[6])&(~(&rE_icode[5:3]))&( rE_icode[2])&( rE_icode[1])&(~rE_icode[0]);	// LrI
-	// Lrr: 11DDDSSS
-	assign wE_dstR_CS_S = ( rE_icode[7])&( rE_icode[6])&(~(&rE_icode[5:3]))&(~(&rE_icode[2:0]));							// Lrr
-	// LrM: 11DDD111
-	assign wE_dstR_CS_M = ( rE_icode[7])&( rE_icode[6])&(~(&rE_icode[5:3]))&(&rE_icode[2:0]);								// Lrr
-	// INr/DCr/ALUr/ALUI/ROT
-	// INr/DCr: 00DDD00x
-	assign wE_dstR_CS_E = ( (~rE_icode[7]) & (~rE_icode[6]) & (~(&rE_icode[5:3])) & (~(|rE_icode[5:3])) & (~rE_icode[2]) & (~rE_icode[1]) ) |		// INr/DCr: 00DDD00x
-						  ( ( rE_icode[7]) & (~rE_icode[6]) & (~(&rE_icode[2:0])) ) | 																// ALUr: 10PPPSSS
-						  ( (~rE_icode[7]) & (~rE_icode[6]) & ( rE_icode[2]) & (~rE_icode[1]) & (~rE_icode[0]) ) |									// ALUI: 00PPP100
-						  ( (~rE_icode[7]) & (~rE_icode[6]) & (~rE_icode[5]) & (~rE_icode[2]) & ( rE_icode[1]) & (~rE_icode[0]) );					// ROT:  000RR010
-	// dst control
-	assign wE_dstR_CS = wE_dstR_CS_C | wE_dstR_CS_S | wE_dstR_CS_M | wE_dstR_CS_E;
-	cpu_forward uForward(
-		.REG_BANK_I(rRegBank[rD_src]), .REG_SRC_I(rD_src),
+	cpu_forward uForward_S(
+		.REG_BANK_I(rRegBank[rD_src]), .REG_SRC_I(rD_src), .REG_SRC_CS_I(wD_RegSrc_CS_S),
 		.E_VAL_C_I(rE_valC), .E_VAL_S_I(rE_valS),
 		.M_VAL_C_I(rM_valC), .M_VAL_S_I(rM_valS), .M_VAL_E_I(rM_valE),
 		.W_VAL_C_I(rW_valC), .W_VAL_S_I(rW_valS), .W_VAL_E_I(rW_valE), .W_VAL_M_I(rW_valM),
-		.E_DST_I(rE_dst), .E_VALID_I(rE_valid), .E_DSTR_CS_I(wE_dstR_CS), .E_DSTR_CS_C_I(wE_dstR_CS_C), .E_DSTR_CS_S_I(wE_dstR_CS_S),
-		.E_DSTR_CS_E_I(wE_dstR_CS_E), .E_DSTR_CS_M_I(wE_dstR_CS_M),
-		.M_DST_I(rM_dst), .M_VALID_I(rM_valid), .M_DSTR_CS_I(rM_dstR_CS), .M_DSTR_CS_C_I(rM_dstR_CS_C), .M_DSTR_CS_S_I(rM_dstR_CS_S), .M_DSTR_CS_E_I(rM_dstR_CS_E), .M_DSTR_CS_M_I(rM_dstR_CS_M),
-		.W_DST_I(rW_dst), .W_VALID_I(rW_valid), .W_DSTR_CS_I(rW_dstR_CS), .W_DSTR_CS_C_I(rW_dstR_CS_C), .W_DSTR_CS_S_I(rW_dstR_CS_S), .W_DSTR_CS_E_I(rW_dstR_CS_E), .W_DSTR_CS_M_I(rW_dstR_CS_M),
-		.REG_BANK_O(wD_forward)
+		.E_DSTR_I(rE_dst), .E_VALID_I(rE_valid), .E_DSTR_CS_I(rE_dstR_CS), .E_DSTR_CS_C_I(rE_dstR_CS_C), .E_DSTR_CS_S_I(rE_dstR_CS_S), .E_DSTR_CS_E_I(rE_dstR_CS_E), .E_DSTR_CS_M_I(rE_dstR_CS_M),
+		.M_DSTR_I(rM_dst), .M_VALID_I(rM_valid), .M_DSTR_CS_I(rM_dstR_CS), .M_DSTR_CS_C_I(rM_dstR_CS_C), .M_DSTR_CS_S_I(rM_dstR_CS_S), .M_DSTR_CS_E_I(rM_dstR_CS_E), .M_DSTR_CS_M_I(rM_dstR_CS_M),
+		.W_DSTR_I(rW_dst), .W_VALID_I(rW_valid), .W_DSTR_CS_I(rW_dstR_CS), .W_DSTR_CS_C_I(rW_dstR_CS_C), .W_DSTR_CS_S_I(rW_dstR_CS_S), .W_DSTR_CS_E_I(rW_dstR_CS_E), .W_DSTR_CS_M_I(rW_dstR_CS_M),
+		.REG_BANK_O(wD_forward_S)
 	);
-	cpu_bubble_data uBubbleData(
-		.REG_SRC_I(rD_src), .REG_SRC_CS_I(),
-		.E_DST_I(rE_dst), .E_VALID_I(rE_valid), .E_DSTR_CS_I(wE_dstR_CS), .E_DSTR_CS_C_I(wE_dstR_CS_C), .E_DSTR_CS_S_I(wE_dstR_CS_S), .E_DSTR_CS_E_I(wE_dstR_CS_E), .E_DSTR_CS_M_I(wE_dstR_CS_M),
-		.M_DST_I(rM_dst), .M_VALID_I(rM_valid), .M_DSTR_CS_I(rM_dstR_CS), .M_DSTR_CS_C_I(rM_dstR_CS_C), .M_DSTR_CS_S_I(rM_dstR_CS_S), .M_DSTR_CS_E_I(rM_dstR_CS_E), .M_DSTR_CS_M_I(rM_dstR_CS_M),
-		.W_DST_I(rW_dst), .W_VALID_I(rW_valid), .W_DSTR_CS_I(rW_dstR_CS), .W_DSTR_CS_C_I(rW_dstR_CS_C), .W_DSTR_CS_S_I(rW_dstR_CS_C), .W_DSTR_CS_E_I(rW_dstR_CS_E), .W_DSTR_CS_M_I(rW_dstR_CS_M),
-		.BUBBLE_DATA_O()
+	cpu_forward uForward_A(
+		.REG_BANK_I(rRegBank[3'b000]), .REG_SRC_I(3'b000), .REG_SRC_CS_I(wD_RegSrc_CS_A),
+		.E_VAL_C_I(rE_valC), .E_VAL_S_I(rE_valS),
+		.M_VAL_C_I(rM_valC), .M_VAL_S_I(rM_valS), .M_VAL_E_I(rM_valE),
+		.W_VAL_C_I(rW_valC), .W_VAL_S_I(rW_valS), .W_VAL_E_I(rW_valE), .W_VAL_M_I(rW_valM),
+		.E_DSTR_I(rE_dst), .E_VALID_I(rE_valid), .E_DSTR_CS_I(rE_dstR_CS), .E_DSTR_CS_C_I(rE_dstR_CS_C), .E_DSTR_CS_S_I(rE_dstR_CS_S), .E_DSTR_CS_E_I(rE_dstR_CS_E), .E_DSTR_CS_M_I(rE_dstR_CS_M),
+		.M_DSTR_I(rM_dst), .M_VALID_I(rM_valid), .M_DSTR_CS_I(rM_dstR_CS), .M_DSTR_CS_C_I(rM_dstR_CS_C), .M_DSTR_CS_S_I(rM_dstR_CS_S), .M_DSTR_CS_E_I(rM_dstR_CS_E), .M_DSTR_CS_M_I(rM_dstR_CS_M),
+		.W_DSTR_I(rW_dst), .W_VALID_I(rW_valid), .W_DSTR_CS_I(rW_dstR_CS), .W_DSTR_CS_C_I(rW_dstR_CS_C), .W_DSTR_CS_S_I(rW_dstR_CS_S), .W_DSTR_CS_E_I(rW_dstR_CS_E), .W_DSTR_CS_M_I(rW_dstR_CS_M),
+		.REG_BANK_O(wD_forward_A)
+	);
+	cpu_forward uForward_H(
+		.REG_BANK_I(rRegBank[3'b101]), .REG_SRC_I(3'b101), .REG_SRC_CS_I(1'b1),
+		.E_VAL_C_I(rE_valC), .E_VAL_S_I(rE_valS),
+		.M_VAL_C_I(rM_valC), .M_VAL_S_I(rM_valS), .M_VAL_E_I(rM_valE),
+		.W_VAL_C_I(rW_valC), .W_VAL_S_I(rW_valS), .W_VAL_E_I(rW_valE), .W_VAL_M_I(rW_valM),
+		.E_DSTR_I(rE_dst), .E_VALID_I(rE_valid), .E_DSTR_CS_I(rE_dstR_CS), .E_DSTR_CS_C_I(rE_dstR_CS_C), .E_DSTR_CS_S_I(rE_dstR_CS_S), .E_DSTR_CS_E_I(rE_dstR_CS_E), .E_DSTR_CS_M_I(rE_dstR_CS_M),
+		.M_DSTR_I(rM_dst), .M_VALID_I(rM_valid), .M_DSTR_CS_I(rM_dstR_CS), .M_DSTR_CS_C_I(rM_dstR_CS_C), .M_DSTR_CS_S_I(rM_dstR_CS_S), .M_DSTR_CS_E_I(rM_dstR_CS_E), .M_DSTR_CS_M_I(rM_dstR_CS_M),
+		.W_DSTR_I(rW_dst), .W_VALID_I(rW_valid), .W_DSTR_CS_I(rW_dstR_CS), .W_DSTR_CS_C_I(rW_dstR_CS_C), .W_DSTR_CS_S_I(rW_dstR_CS_S), .W_DSTR_CS_E_I(rW_dstR_CS_E), .W_DSTR_CS_M_I(rW_dstR_CS_M),
+		.REG_BANK_O(wD_forward_H)
+	);
+	cpu_forward uForward_L(
+		.REG_BANK_I(rRegBank[3'b110]), .REG_SRC_I(3'b110), .REG_SRC_CS_I(1'b1),
+		.E_VAL_C_I(rE_valC), .E_VAL_S_I(rE_valS),
+		.M_VAL_C_I(rM_valC), .M_VAL_S_I(rM_valS), .M_VAL_E_I(rM_valE),
+		.W_VAL_C_I(rW_valC), .W_VAL_S_I(rW_valS), .W_VAL_E_I(rW_valE), .W_VAL_M_I(rW_valM),
+		.E_DSTR_I(rE_dst), .E_VALID_I(rE_valid), .E_DSTR_CS_I(rE_dstR_CS), .E_DSTR_CS_C_I(rE_dstR_CS_C), .E_DSTR_CS_S_I(rE_dstR_CS_S), .E_DSTR_CS_E_I(rE_dstR_CS_E), .E_DSTR_CS_M_I(rE_dstR_CS_M),
+		.M_DSTR_I(rM_dst), .M_VALID_I(rM_valid), .M_DSTR_CS_I(rM_dstR_CS), .M_DSTR_CS_C_I(rM_dstR_CS_C), .M_DSTR_CS_S_I(rM_dstR_CS_S), .M_DSTR_CS_E_I(rM_dstR_CS_E), .M_DSTR_CS_M_I(rM_dstR_CS_M),
+		.W_DSTR_I(rW_dst), .W_VALID_I(rW_valid), .W_DSTR_CS_I(rW_dstR_CS), .W_DSTR_CS_C_I(rW_dstR_CS_C), .W_DSTR_CS_S_I(rW_dstR_CS_S), .W_DSTR_CS_E_I(rW_dstR_CS_E), .W_DSTR_CS_M_I(rW_dstR_CS_M),
+		.REG_BANK_O(wD_forward_L)
+	);
+	cpu_bubble_data uBubbleData_S(
+		.REG_SRC_I(rD_src), .REG_SRC_CS_I(wD_RegSrc_CS_S),
+		.M_DSTR_I(rM_dst), .M_VALID_I(rM_valid), .M_DSTR_CS_I(rM_dstR_CS), .M_DSTR_CS_C_I(rM_dstR_CS_C), .M_DSTR_CS_S_I(rM_dstR_CS_S), .M_DSTR_CS_E_I(rM_dstR_CS_E), .M_DSTR_CS_M_I(rM_dstR_CS_M),
+		.W_DSTR_I(rW_dst), .W_VALID_I(rW_valid), .W_DSTR_CS_I(rW_dstR_CS), .W_DSTR_CS_C_I(rW_dstR_CS_C), .W_DSTR_CS_S_I(rW_dstR_CS_C), .W_DSTR_CS_E_I(rW_dstR_CS_E), .W_DSTR_CS_M_I(rW_dstR_CS_M),
+		.BUBBLE_DATA_O(wD_Bubble_S)
+	);
+	cpu_bubble_data uBubbleData_A(
+		.REG_SRC_I(3'b000), .REG_SRC_CS_I(wD_RegSrc_CS_A),
+		.M_DSTR_I(rM_dst), .M_VALID_I(rM_valid), .M_DSTR_CS_I(rM_dstR_CS), .M_DSTR_CS_C_I(rM_dstR_CS_C), .M_DSTR_CS_S_I(rM_dstR_CS_S), .M_DSTR_CS_E_I(rM_dstR_CS_E), .M_DSTR_CS_M_I(rM_dstR_CS_M),
+		.W_DSTR_I(rW_dst), .W_VALID_I(rW_valid), .W_DSTR_CS_I(rW_dstR_CS), .W_DSTR_CS_C_I(rW_dstR_CS_C), .W_DSTR_CS_S_I(rW_dstR_CS_C), .W_DSTR_CS_E_I(rW_dstR_CS_E), .W_DSTR_CS_M_I(rW_dstR_CS_M),
+		.BUBBLE_DATA_O(wD_Bubble_A)
 	);
 	
 	// LMI
@@ -215,9 +290,9 @@ module cpu(
 	
 	// dstVal
 	assign wW_dstVal = ( {8{rW_dstR_CS_C}} & rW_valC ) |
-					( {8{rW_dstR_CS_S}} & rW_valS ) |
-					( {8{rW_dstR_CS_M}} & rW_valM ) |
-					( {8{rW_dstR_CS_E}} & rW_valE );
+					   ( {8{rW_dstR_CS_S}} & rW_valS ) |
+					   ( {8{rW_dstR_CS_M}} & rW_valM ) |
+					   ( {8{rW_dstR_CS_E}} & rW_valE );
 	
 	// **********
 	// MAIN CODE
@@ -267,14 +342,14 @@ module cpu(
 	// Fetch (F3->D)
 	always @(posedge CLK_I) begin
 		if(~nRST_I) begin
-			rD_valid <= 1'b0;
-			rD_icode <= 8'b0;
-			rD_ifun  <= 4'b0;
-			rD_src   <= 3'b0;
-			rD_dst   <= 3'b0;
-			rD_valC  <= 8'b0;
-			rD_valP  <= 14'b0;
-			rD_count <= 2'b0;
+			rD_valid 		<= 1'b0;
+			rD_icode 		<= 8'b0;
+			rD_ifun  		<= 4'b0;
+			rD_src   		<= 3'b0;
+			rD_dst   		<= 3'b0;
+			rD_valP			<= 14'b0;
+			rD_valC  		<= 8'b0;
+			rD_count 		<= 2'b0;
 			end
 		else begin
 			if((~rD_count[1])&(~rD_count[0])) begin
@@ -308,16 +383,35 @@ module cpu(
 			rE_dst	 		<= 3'b0;
 			rE_valP  		<= 14'b0;
 			rE_valC  		<= 8'b0;
+			rE_valH			<= 8'b0;
+			rE_valL			<= 8'b0;
+			rE_dstR_CS		<= 1'b0;
+			rE_dstR_CS_C	<= 1'b0;
+			rE_dstR_CS_S	<= 1'b0;
+			rE_dstR_CS_E	<= 1'b0;
+			rE_dstR_CS_M	<= 1'b0;
+			rE_dstM_CS		<= 1'b0;
+			rE_dstM_CS_C	<= 1'b0;
+			rE_dstM_CS_S	<= 1'b0;
 			end
 		else begin
 			rE_valid <= rD_valid;
 			
 			if(rD_valid) begin
-				rE_icode 	<= rD_icode;
-				rE_ifun  	<= rD_ifun;
-				rE_src		<= rD_src;
-				rE_dst  	<= rD_dst;
-				rE_valP  	<= rD_valP;
+				rE_icode 		<= rD_icode;
+				rE_ifun  		<= rD_ifun;
+				rE_src			<= rD_src;
+				rE_dst  		<= rD_dst;
+				rE_valP  		<= rD_valP;
+				
+				rE_dstR_CS		<= wD_dstR_CS;
+				rE_dstR_CS_C	<= wD_dstR_CS_C;
+				rE_dstR_CS_S	<= wD_dstR_CS_S;
+				rE_dstR_CS_E	<= wD_dstR_CS_E;
+				rE_dstR_CS_M	<= wD_dstR_CS_M;
+				rE_dstM_CS		<= wD_dstM_CS;
+				rE_dstM_CS_C	<= wD_dstM_CS_C;
+				rE_dstM_CS_S	<= wD_dstM_CS_S;
 				
 				// valC
 				rE_valC  <= rD_valC;
@@ -326,16 +420,16 @@ module cpu(
 				casex(rD_icode)
 					8'b00xxx00x: begin			// INr, DCr
 						if(~wD_INS_NOP)
-							rE_valA <= rRegBank[rD_dst];
+							rE_valA <= wD_forward_S;
 						end
 					8'b000xx010: begin			// ROT
-						rE_valA <= rRegBank[3'b000];
+						rE_valA <= wD_forward_A;
 						end
 					8'b00xxx100: begin			// ALUI
-						rE_valA <= rRegBank[3'b000];
+						rE_valA <= wD_forward_A;
 						end
 					8'b10xxxxxx: begin			// ALUr
-						rE_valA <= rRegBank[rD_src];
+						rE_valA <= wD_forward_A;
 						end
 					endcase
 				
@@ -353,14 +447,23 @@ module cpu(
 					8'b00xxx110: begin
 						rE_valS <= rD_valC;
 						end
+					8'b10xxxxxx: begin
+						rE_valS <= wD_forward_S;
+						end
 					8'b11xxxxxx: begin
-						rE_valS <= rRegBank[rD_src];
+						rE_valS <= wD_forward_S;
 						end
 					default: begin
 						rE_valS <= 8'b0;
 						end
 					endcase
 				end
+				
+				// valH
+				rE_valH <= wD_forward_H;
+				
+				// valL
+				rE_valL <= wD_forward_L;
 				
 				// src select
 				
@@ -383,16 +486,19 @@ module cpu(
 			if(rE_valid) begin
 				rM_icode	<= rE_icode;
 				rM_valC		<= rE_valC;
+				rM_valS		<= rE_valS;
+				rM_valH		<= rE_valH;
+				rM_valL		<= rE_valL;
 				rM_dst		<= rE_dst;
 				// src/dst control
-				rM_dstR_CS		<= wE_dstR_CS;
-				rM_dstR_CS_C	<= wE_dstR_CS_C;
-				rM_dstR_CS_S	<= wE_dstR_CS_S;
-				rM_dstR_CS_E	<= wE_dstR_CS_E;
-				rM_dstR_CS_M	<= wE_dstR_CS_M;
-				rM_dstM_CS		<= wE_dstM_CS;
-				rM_dstM_CS_C	<= wE_dstM_CS_C;
-				rM_dstM_CS_S	<= wE_dstM_CS_S;
+				rM_dstR_CS		<= rE_dstR_CS;
+				rM_dstR_CS_C	<= rE_dstR_CS_C;
+				rM_dstR_CS_S	<= rE_dstR_CS_S;
+				rM_dstR_CS_E	<= rE_dstR_CS_E;
+				rM_dstR_CS_M	<= rE_dstR_CS_M;
+				rM_dstM_CS		<= rE_dstM_CS;
+				rM_dstM_CS_C	<= rE_dstM_CS_C;
+				rM_dstM_CS_S	<= rE_dstM_CS_S;
 				end
 			end
 		end
@@ -414,6 +520,8 @@ module cpu(
 			if(rM_valid) begin
 				rW_icode	<= rM_icode;
 				rW_valC		<= rM_valC;
+				rW_valS		<= rM_valS;
+				rW_valE		<= rM_valE;
 				rW_dst		<= rM_dst;
 				// src/dst control
 				rW_dstR_CS		<= rM_dstR_CS;
