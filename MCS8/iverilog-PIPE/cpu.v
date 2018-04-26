@@ -196,7 +196,7 @@ module cpu(
 		.REG_BANK_O(wD_forward)
 	);
 	cpu_bubble_data uBubbleData(
-		.REG_SRC_I(rD_src), .REG_SRC_CS_I,
+		.REG_SRC_I(rD_src), .REG_SRC_CS_I(),
 		.E_DST_I(rE_dst), .E_VALID_I(rE_valid), .E_DSTR_CS_I(wE_dstR_CS), .E_DSTR_CS_C_I(wE_dstR_CS_C), .E_DSTR_CS_S_I(wE_dstR_CS_S), .E_DSTR_CS_E_I(wE_dstR_CS_E), .E_DSTR_CS_M_I(wE_dstR_CS_M),
 		.M_DST_I(rM_dst), .M_VALID_I(rM_valid), .M_DSTR_CS_I(rM_dstR_CS), .M_DSTR_CS_C_I(rM_dstR_CS_C), .M_DSTR_CS_S_I(rM_dstR_CS_S), .M_DSTR_CS_E_I(rM_dstR_CS_E), .M_DSTR_CS_M_I(rM_dstR_CS_M),
 		.W_DST_I(rW_dst), .W_VALID_I(rW_valid), .W_DSTR_CS_I(rW_dstR_CS), .W_DSTR_CS_C_I(rW_dstR_CS_C), .W_DSTR_CS_S_I(rW_dstR_CS_C), .W_DSTR_CS_E_I(rW_dstR_CS_E), .W_DSTR_CS_M_I(rW_dstR_CS_M),
