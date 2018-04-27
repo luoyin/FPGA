@@ -79,7 +79,7 @@ module cpu(
 	// State D
 	reg        	rD_valid;
 	reg  [7:0] 	rD_icode;
-	reg  [3:0] 	rD_ifun;
+	reg  [2:0] 	rD_ifun;
 	reg  [2:0] 	rD_src;
 	reg  [2:0] 	rD_dst;
 	reg [13:0] 	rD_valP;
@@ -112,10 +112,12 @@ module cpu(
 	wire		wD_dstM_CS;				// ->M
 	wire		wD_dstM_CS_C;			// imm->M
 	wire		wD_dstM_CS_S;			// reg->M
+	wire [3:0]	wD_ALU_OPR;
 	// ***** Stage E *****
 	reg 		rE_valid;
 	reg  [7:0] 	rE_icode;
-	reg  [3:0] 	rE_ifun;
+	reg  [2:0] 	rE_ifun;
+	reg  [3:0]	rE_ALU_OPR;
 	reg  [2:0] 	rE_src;
 	reg  [2:0] 	rE_dst;
 	reg  [4:0] 	rE_addrIO;
@@ -135,6 +137,12 @@ module cpu(
 	reg			rE_dstM_CS;				// ->M
 	reg			rE_dstM_CS_C;			// imm->M
 	reg			rE_dstM_CS_S;			// reg->M
+	// ALU
+	wire [7:0]	wE_ALU_E;
+	wire		wE_ALU_OUT_CF;
+	wire		wE_ALU_OUT_ZF;
+	wire		wE_ALU_OUT_SF;
+	wire		wE_ALU_OUT_PF;
 	// ***** Stage M *****
 	reg 		rM_valid;
 	reg  [7:0] 	rM_icode;
@@ -176,11 +184,15 @@ module cpu(
 	// RegBank
 	reg [7:0] rRegBank[7:0];
 	reg [7:0] rTest;
+	// Status Register
+	reg [3:0] rStatus;			// P,S,Z,C
 	
 	wire wDoubleByte;
 	wire wTripleByte;
 	
 	wire wINS_NOP;
+	wire wCOND_JMP_CAL;
+	wire wCOND_RET;
 	
 	// **********
 	// INSTANCE MODULE
@@ -197,7 +209,7 @@ module cpu(
 	// INC: 00DDD000
 	assign wD_INS_INC 	= (~rD_icode[7]) & (~rD_icode[6]) & (~(|rD_icode[5:3])) & (~(&rD_icode[5:3])) & (~rD_icode[2]) & (~rD_icode[1]) & (~rD_icode[0]);
 	// DCR: 00DDD001
-	assign wD_INS_INC 	= (~rD_icode[7]) & (~rD_icode[6]) & (~(|rD_icode[5:3])) & (~(&rD_icode[5:3])) & (~rD_icode[2]) & (~rD_icode[1]) & ( rD_icode[0]);
+	assign wD_INS_DCR 	= (~rD_icode[7]) & (~rD_icode[6]) & (~(|rD_icode[5:3])) & (~(&rD_icode[5:3])) & (~rD_icode[2]) & (~rD_icode[1]) & ( rD_icode[0]);
 	// ALUR: 10xxxSSS
 	assign wD_INS_ALUR 	= ( rD_icode[7]) & (~rD_icode[6]) & (~(&rD_icode[2:0]));
 	// ALUI: 00xxx100
@@ -212,6 +224,9 @@ module cpu(
 	assign wD_INS_LRI	= (~rD_icode[7]) & (~rD_icode[6]) & (~(&rD_icode[5:3])) & ( rD_icode[2]) & ( rD_icode[1]) & (~rD_icode[0]);
 	// LMI: 00111110
 	assign wD_INS_LMI	= (~rD_icode[7]) & (~rD_icode[6]) & (&rD_icode[5:3])    & ( rD_icode[2]) & ( rD_icode[1]) & (~rD_icode[0]);
+	// ROT: 00xxx010
+	assign wD_INS_ROT 	= (~rD_icode[7]) & (~rD_icode[6]) & (~rD_icode[2]) & ( rD_icode[1]) & (~rD_icode[0]);
+	
 	
 	assign wD_RegSrc_CS_A = wD_INS_ALUR | wD_INS_ALUI;
 	assign wD_RegSrc_CS_S = wD_INS_ALUR | wD_INS_LRR | wD_INS_LMR;
@@ -223,6 +238,9 @@ module cpu(
 	assign wD_dstM_CS_C	= wD_INS_LMI;
 	assign wD_dstM_CS_S	= wD_INS_LMR;
 	assign wD_dstM_CS	= wD_dstM_CS_C | wD_dstR_CS_S;
+	
+	// ALU_OPR: {ALU, ROT, INC, DCR}
+	assign wD_ALU_OPR	= { wD_INS_ALUR|wD_INS_ALUI, wD_INS_ROT, wD_INS_INC, wD_INS_DCR };
 	
 	// **** Stage E ****
 	cpu_forward uForward_S(
@@ -276,6 +294,17 @@ module cpu(
 		.M_DSTR_I(rM_dst), .M_VALID_I(rM_valid), .M_DSTR_CS_I(rM_dstR_CS), .M_DSTR_CS_C_I(rM_dstR_CS_C), .M_DSTR_CS_S_I(rM_dstR_CS_S), .M_DSTR_CS_E_I(rM_dstR_CS_E), .M_DSTR_CS_M_I(rM_dstR_CS_M),
 		.W_DSTR_I(rW_dst), .W_VALID_I(rW_valid), .W_DSTR_CS_I(rW_dstR_CS), .W_DSTR_CS_C_I(rW_dstR_CS_C), .W_DSTR_CS_S_I(rW_dstR_CS_C), .W_DSTR_CS_E_I(rW_dstR_CS_E), .W_DSTR_CS_M_I(rW_dstR_CS_M),
 		.BUBBLE_DATA_O(wD_Bubble_A)
+	);
+	cpu_alu uALU(
+		.OPR_SELECT(rE_ALU_OPR), .FUNC_I(rE_ifun),
+		.ALU_A_I(rE_valA), .ALU_B_I(rE_valS), .ALU_CF_I(rStatus[0]),
+		.ALU_E_O(wE_ALU_E), .ALU_CF_O(wE_ALU_OUT_CF), .ALU_ZF_O(wE_ALU_OUT_ZF), .ALU_SF_O(wE_ALU_OUT_SF), .ALU_PF_O(wE_ALU_OUT_PF)
+	);
+	cpu_cond_forward uCondForward(
+		.D_OPCODE_I(rD_icode), 
+		.E_OPCODE_I(rE_icode), .E_IFUN_I(rE_ifun),
+		.E_ALU_STATUS_I({wE_ALU_OUT_PF, wE_ALU_OUT_SF, wE_ALU_OUT_SF, wE_ALU_OUT_CF}), .STATUS_I(rStatus),
+		.COND_JMP_CAL_O(wCOND_JMP_CAL), .COND_RET_O(wCOND_RET)
 	);
 	
 	// LMI
@@ -344,7 +373,7 @@ module cpu(
 		if(~nRST_I) begin
 			rD_valid 		<= 1'b0;
 			rD_icode 		<= 8'b0;
-			rD_ifun  		<= 4'b0;
+			rD_ifun  		<= 3'b0;
 			rD_src   		<= 3'b0;
 			rD_dst   		<= 3'b0;
 			rD_valP			<= 14'b0;
@@ -354,7 +383,7 @@ module cpu(
 		else begin
 			if((~rD_count[1])&(~rD_count[0])) begin
 				rD_icode <= rF3_IR;
-				rD_ifun  <= { (~rF3_IR[2])&( rF3_IR[1])&(~rF3_IR[0]), rF3_IR[5], rF3_IR[4], rF3_IR[3] };
+				rD_ifun  <= rF3_IR[5:3];
 				rD_src   <= rF3_IR[2:0];
 				rD_dst   <= rF3_IR[5:3];
 				rD_valC  <= rF2_IR;
@@ -379,7 +408,8 @@ module cpu(
 		if(~nRST_I) begin
 			rE_valid 		<= 1'b0;
 			rE_icode 		<= 8'b0;
-			rE_ifun  		<= 4'b0;
+			rE_ifun  		<= 3'b0;
+			rE_ALU_OPR		<= 4'b0;
 			rE_dst	 		<= 3'b0;
 			rE_valP  		<= 14'b0;
 			rE_valC  		<= 8'b0;
@@ -400,7 +430,7 @@ module cpu(
 			if(rD_valid) begin
 				rE_icode 		<= rD_icode;
 				rE_ifun  		<= rD_ifun;
-				rE_src			<= rD_src;
+				rE_ALU_OPR		<= wD_ALU_OPR;
 				rE_dst  		<= rD_dst;
 				rE_valP  		<= rD_valP;
 				
@@ -480,6 +510,7 @@ module cpu(
 			rM_valS			<= 8'b0;
 			rM_valE			<= 8'b0;
 			rM_dst			<= 8'b0;
+			rStatus			<= 4'b0;
 			end
 		else begin
 			rM_valid		<= rE_valid;
@@ -489,6 +520,7 @@ module cpu(
 				rM_valS		<= rE_valS;
 				rM_valH		<= rE_valH;
 				rM_valL		<= rE_valL;
+				rM_valE		<= wE_ALU_E;
 				rM_dst		<= rE_dst;
 				// src/dst control
 				rM_dstR_CS		<= rE_dstR_CS;
@@ -499,9 +531,16 @@ module cpu(
 				rM_dstM_CS		<= rE_dstM_CS;
 				rM_dstM_CS_C	<= rE_dstM_CS_C;
 				rM_dstM_CS_S	<= rE_dstM_CS_S;
-				end
+				// ALU
+				case(rE_ALU_OPR)
+					// ALU
+					4'b1000:	rStatus 	<= { wE_ALU_OUT_PF, wE_ALU_OUT_SF, wE_ALU_OUT_ZF, wE_ALU_OUT_CF };
+					4'b0100:	rStatus[0]	<= wE_ALU_OUT_CF;
+					default:;
+				endcase
 			end
 		end
+	end
 		
 	// Memory (M->W)
 	always @(posedge CLK_I) begin
