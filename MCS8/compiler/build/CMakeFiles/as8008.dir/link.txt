@@ -1,0 +1,1 @@
+/usr/bin/cc  -g   CMakeFiles/as8008.dir/lex.yy.c.o CMakeFiles/as8008.dir/parser.tab.c.o CMakeFiles/as8008.dir/parser.c.o CMakeFiles/as8008.dir/as8008.c.o  -o as8008 -rdynamic -lfl 

@@ -92,4 +92,22 @@
 \chapter{流水线设计}
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{as8008编译器设计}
+\section{语法规则}
+
+\section{需求分析}
+\begin{itemize}
+  \item 支持多个源文件
+\end{itemize}
+
+\section{设计思路}
+\begin{itemize}
+  \item 逐个扫描源文件, 解析指令
+  \item 二次扫描源文件, 生成全局符号表, 并生成地址
+  \item 三次扫描源文件, 生成编译后代码
+\end{itemize}
+
+
 \end{document}

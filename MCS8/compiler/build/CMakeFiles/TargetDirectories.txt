@@ -1,0 +1,8 @@
+/disk1/projects/FPGA.github/MCS8/compiler/build/CMakeFiles/edit_cache.dir
+/disk1/projects/FPGA.github/MCS8/compiler/build/CMakeFiles/rebuild_cache.dir
+/disk1/projects/FPGA.github/MCS8/compiler/build/CMakeFiles/list_install_components.dir
+/disk1/projects/FPGA.github/MCS8/compiler/build/CMakeFiles/install.dir
+/disk1/projects/FPGA.github/MCS8/compiler/build/CMakeFiles/install/local.dir
+/disk1/projects/FPGA.github/MCS8/compiler/build/CMakeFiles/install/strip.dir
+/disk1/projects/FPGA.github/MCS8/compiler/build/CMakeFiles/as8008.dir
+/disk1/projects/FPGA.github/MCS8/compiler/build/CMakeFiles/GenSource_parser_as8008.dir
