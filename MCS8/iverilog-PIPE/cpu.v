@@ -68,16 +68,20 @@ module cpu(
 	// ATRRIBUTE
 	// **********
 	// Stage F1
-	reg [7:0] rF1_IR;
-	reg rF1_IR_valid;
+	reg [13:0]	rF1_valPC;
+	reg  [7:0] 	rF1_IR;
+	reg 		rF1_IR_valid;
 	// Stage F2
-	reg [7:0] rF2_IR;
-	reg rF2_IR_valid;
+	reg [13:0]	rF2_valPC;
+	reg  [7:0] 	rF2_IR;
+	reg 		rF2_IR_valid;
 	// Stage F3
-	reg [7:0] rF3_IR;
-	reg rF3_IR_valid;
+	reg [13:0]	rF3_valPC;
+	reg  [7:0] 	rF3_IR;
+	reg 		rF3_IR_valid;
 	// State D
 	reg        	rD_valid;
+	reg [13:0]	rD_valPC;
 	reg  [7:0] 	rD_icode;
 	reg  [2:0] 	rD_ifun;
 	reg  [2:0] 	rD_src;
@@ -115,6 +119,7 @@ module cpu(
 	wire [3:0]	wD_ALU_OPR;
 	// ***** Stage E *****
 	reg 		rE_valid;
+	reg [13:0]	rE_valPC;
 	reg  [7:0] 	rE_icode;
 	reg  [2:0] 	rE_ifun;
 	reg  [3:0]	rE_ALU_OPR;
@@ -145,6 +150,7 @@ module cpu(
 	wire		wE_ALU_OUT_PF;
 	// ***** Stage M *****
 	reg 		rM_valid;
+	reg [13:0]	rM_valPC;
 	reg  [7:0] 	rM_icode;
 	reg  [2:0] 	rM_dst;
 	reg [13:0] 	rM_valP;
@@ -165,6 +171,7 @@ module cpu(
 	reg  [4:0] 	rM_addrIO;
 	// ***** Stage W *****
 	reg 		rW_valid;
+	reg [13:0]	rW_valPC;
 	reg  [7:0] 	rW_icode;
 	reg  [2:0] 	rW_dst;
 	reg [13:0] 	rW_valP;
@@ -191,7 +198,8 @@ module cpu(
 	wire wTripleByte;
 	
 	wire wINS_NOP;
-	wire wCOND_JMP_CAL;
+	wire wCOND_JMP;
+	wire wCOND_CAL;
 	wire wCOND_RET;
 	
 	// **********
@@ -304,7 +312,7 @@ module cpu(
 		.D_OPCODE_I(rD_icode), 
 		.E_OPCODE_I(rE_icode), .E_IFUN_I(rE_ifun),
 		.E_ALU_STATUS_I({wE_ALU_OUT_PF, wE_ALU_OUT_SF, wE_ALU_OUT_SF, wE_ALU_OUT_CF}), .STATUS_I(rStatus),
-		.COND_JMP_CAL_O(wCOND_JMP_CAL), .COND_RET_O(wCOND_RET)
+		.COND_JMP_O(wCOND_JMP), .COND_CAL_O(wCOND_CAL), .COND_RET_O(wCOND_RET)
 	);
 	
 	// LMI
@@ -329,49 +337,73 @@ module cpu(
 	// Stack Control
 	always @(posedge CLK_I) begin
 		if(~nRST_I) begin
-			rStack[0] <= 14'b0;
-			rStack[1] <= 14'b0;
-			rStack[2] <= 14'b0;
-			rStack[3] <= 14'b0;
-			rStack[4] <= 14'b0;
-			rStack[5] <= 14'b0;
-			rStack[6] <= 14'b0;
-			rStack[7] <= 14'b0;
-			rStack_ndx <= 3'b0;
-			end
+			rStack[0] 	<= 14'b0;
+			rStack[1] 	<= 14'b0;
+			rStack[2] 	<= 14'b0;
+			rStack[3] 	<= 14'b0;
+			rStack[4] 	<= 14'b0;
+			rStack[5] 	<= 14'b0;
+			rStack[6] 	<= 14'b0;
+			rStack[7] 	<= 14'b0;
+			rStack_ndx 	<= 3'b0;
+		end
 		else begin
-			rStack[rStack_ndx] <= rStack[rStack_ndx]+1;
+			if(wCOND_JMP) begin
+				rStack[rStack_ndx] 		<= rD_valP;
+			end
+			else if(wCOND_CAL) begin
+				rStack[rStack_ndx] 		<= rD_valPC + 2;
+				rStack[rStack_ndx+1] 	<= rD_valP;
+				rStack_ndx				<= rStack_ndx + 1;
+			end
+			else if(wCOND_RET) begin
+				rStack_ndx				<= rStack_ndx - 1;
+			end
+			else begin
+				rStack[rStack_ndx] <= rStack[rStack_ndx]+1;
 			end
 		end
+	end
 		
 	// Fetch 2 (F1->F2)
 	always @(posedge CLK_I) begin
 		if(~nRST_I) begin
-			rF2_IR <= 8'b0;
-			rF2_IR_valid <= 1'b0;
-			end
-		else begin
-			rF2_IR <= rF1_IR;
-			rF2_IR_valid <= rF1_IR_valid;
-			end
+			rF2_valPC		<= 14'b0;
+			rF2_IR 			<= 8'b0;
+			rF2_IR_valid 	<= 1'b0;
 		end
+		else begin
+			rF2_valPC		<= rF1_valPC;
+			rF2_IR 			<= rF1_IR;
+			if(wCOND_JMP | wCOND_CAL | wCOND_RET)
+				rF2_IR_valid	<= 1'b0;
+			else
+				rF2_IR_valid 	<= rF1_IR_valid;
+		end
+	end
 		
 	// Fetch 3 (F2->F3)
 	always @(posedge CLK_I) begin
 		if(~nRST_I) begin
-			rF3_IR <= 8'b0;
-			rF3_IR_valid <= 8'b0;
-			end
-		else begin
-			rF3_IR <= rF2_IR;
-			rF3_IR_valid <= rF2_IR_valid;
-			end
+			rF3_valPC		<= 14'b0;
+			rF3_IR 			<= 8'b0;
+			rF3_IR_valid 	<= 8'b0;
 		end
+		else begin
+			rF3_valPC		<= rF2_valPC;
+			rF3_IR 			<= rF2_IR;
+			if(wCOND_JMP | wCOND_CAL | wCOND_RET)
+				rF3_IR_valid	<= 1'b0;
+			else
+				rF3_IR_valid 	<= rF2_IR_valid;
+		end
+	end
 		
 	// Fetch (F3->D)
 	always @(posedge CLK_I) begin
 		if(~nRST_I) begin
 			rD_valid 		<= 1'b0;
+			rD_valPC		<= 14'b0;
 			rD_icode 		<= 8'b0;
 			rD_ifun  		<= 3'b0;
 			rD_src   		<= 3'b0;
@@ -379,34 +411,44 @@ module cpu(
 			rD_valP			<= 14'b0;
 			rD_valC  		<= 8'b0;
 			rD_count 		<= 2'b0;
-			end
+		end
 		else begin
 			if((~rD_count[1])&(~rD_count[0])) begin
-				rD_icode <= rF3_IR;
-				rD_ifun  <= rF3_IR[5:3];
-				rD_src   <= rF3_IR[2:0];
-				rD_dst   <= rF3_IR[5:3];
-				rD_valC  <= rF2_IR;
-				rD_valP  <= { rF1_IR[5:0], rF2_IR };
-				rD_valid <= rF3_IR_valid & (~wINS_NOP);
+				if(wCOND_JMP | wCOND_CAL | wCOND_RET) begin
+					rD_valPC	<= 14'b0;
+					rD_icode 	<= 8'b0;
+				end
+				else begin
+					rD_valPC	<= rF3_valPC;
+					rD_icode 	<= rF3_IR;
+				end
+				
+				rD_ifun  	<= rF3_IR[5:3];
+				rD_src   	<= rF3_IR[2:0];
+				rD_dst   	<= rF3_IR[5:3];
+				rD_valC  	<= rF2_IR;
+				rD_valP  	<= { rF1_IR[5:0], rF2_IR };
+				rD_valid 	<= rF3_IR_valid & (~wINS_NOP);
 				if(wDoubleByte)
 					rD_count <= 1;
 				else if(wTripleByte)
 					rD_count <= 2;
 				else
 					rD_count <= 0;
-				end
+			end
 			else begin
-				rD_count <= rD_count-1;
-				rD_valid <= 1'b0;
-				end
+				rD_count 	<= rD_count-1;
+				rD_icode	<= 8'b0;
+				rD_valid 	<= 1'b0;
 			end
 		end
+	end
 	
 	// Decode (D->E)
 	always @(posedge CLK_I) begin
 		if(~nRST_I) begin
 			rE_valid 		<= 1'b0;
+			rE_valPC		<= 14'b0;
 			rE_icode 		<= 8'b0;
 			rE_ifun  		<= 3'b0;
 			rE_ALU_OPR		<= 4'b0;
@@ -423,12 +465,13 @@ module cpu(
 			rE_dstM_CS		<= 1'b0;
 			rE_dstM_CS_C	<= 1'b0;
 			rE_dstM_CS_S	<= 1'b0;
-			end
+		end
 		else begin
 			rE_valid <= rD_valid;
 			
 			if(rD_valid) begin
 				rE_icode 		<= rD_icode;
+				rE_valPC		<= rD_valPC;
 				rE_ifun  		<= rD_ifun;
 				rE_ALU_OPR		<= wD_ALU_OPR;
 				rE_dst  		<= rD_dst;
@@ -467,43 +510,40 @@ module cpu(
 				casex(rD_icode)
 					8'b00xxx000: begin
 						rE_valS <= 8'b00000001;
-						end
+					end
 					8'b00xxx001: begin
 						rE_valS <= 8'b11111111;
-						end
+					end
 					8'b00xxx100: begin
 						rE_valS <= rD_valC;
-						end
+					end
 					8'b00xxx110: begin
 						rE_valS <= rD_valC;
-						end
+					end
 					8'b10xxxxxx: begin
 						rE_valS <= wD_forward_S;
-						end
+					end
 					8'b11xxxxxx: begin
 						rE_valS <= wD_forward_S;
-						end
+					end
 					default: begin
 						rE_valS <= 8'b0;
-						end
-					endcase
-				end
-				
+					end
+				endcase
 				// valH
 				rE_valH <= wD_forward_H;
-				
 				// valL
 				rE_valL <= wD_forward_L;
-				
 				// src select
-				
 			end
 		end
+	end
 		
 	// Execute (E->M)
 	always @(posedge CLK_I) begin
 		if(~nRST_I) begin
 			rM_valid 		<= 1'b0;
+			rM_valPC		<= 14'b0;
 			rM_icode 		<= 8'b0;
 			// src
 			rM_valC			<= 8'b0;
@@ -515,13 +555,14 @@ module cpu(
 		else begin
 			rM_valid		<= rE_valid;
 			if(rE_valid) begin
-				rM_icode	<= rE_icode;
-				rM_valC		<= rE_valC;
-				rM_valS		<= rE_valS;
-				rM_valH		<= rE_valH;
-				rM_valL		<= rE_valL;
-				rM_valE		<= wE_ALU_E;
-				rM_dst		<= rE_dst;
+				rM_valPC		<= rE_valPC;
+				rM_icode		<= rE_icode;
+				rM_valC			<= rE_valC;
+				rM_valS			<= rE_valS;
+				rM_valH			<= rE_valH;
+				rM_valL			<= rE_valL;
+				rM_valE			<= wE_ALU_E;
+				rM_dst			<= rE_dst;
 				// src/dst control
 				rM_dstR_CS		<= rE_dstR_CS;
 				rM_dstR_CS_C	<= rE_dstR_CS_C;
@@ -546,6 +587,7 @@ module cpu(
 	always @(posedge CLK_I) begin
 		if(~nRST_I) begin
 			rW_valid		<= 1'b0;
+			rW_valPC		<= 14'b0;
 			rW_icode		<= 8'b0;
 			// src
 			rW_valC			<= 8'b0;
@@ -557,6 +599,7 @@ module cpu(
 		else begin
 			rW_valid		<= rM_valid;
 			if(rM_valid) begin
+				rW_valPC	<= rM_valPC;
 				rW_icode	<= rM_icode;
 				rW_valC		<= rM_valC;
 				rW_valS		<= rM_valS;
@@ -575,20 +618,29 @@ module cpu(
 	// WriteBack (ROM->F1)
 	always @(posedge CLK_I) begin
 		if(~nRST_I) begin
-			rRegBank[0] <= 8'b0;
-			rRegBank[1] <= 8'b0;
-			rRegBank[2] <= 8'b0;
-			rRegBank[3] <= 8'b0;
-			rRegBank[4] <= 8'b0;
-			rRegBank[5] <= 8'b0;
-			rRegBank[6] <= 8'b0;
-			rRegBank[7] <= 8'b0;
-			rF1_IR <= 8'b0;
-			rF1_IR_valid <=1'b0;
+			rRegBank[0] 	<= 8'b0;
+			rRegBank[1] 	<= 8'b0;
+			rRegBank[2] 	<= 8'b0;
+			rRegBank[3] 	<= 8'b0;
+			rRegBank[4] 	<= 8'b0;
+			rRegBank[5] 	<= 8'b0;
+			rRegBank[6] 	<= 8'b0;
+			rRegBank[7] 	<= 8'b0;
+			rF1_valPC		<= 14'b0;
+			rF1_IR 			<= 8'b0;
+			rF1_IR_valid 	<=1'b0;
 			end
 		else begin
-			rF1_IR <= I_DAT_I;
-			rF1_IR_valid <= 1'b1;
+			
+			if(wCOND_JMP | wCOND_CAL | wCOND_RET) begin
+				rF1_IR_valid 	<= 1'b0;
+				rF1_IR			<= 8'b0;
+			end
+			else begin
+				rF1_IR_valid 	<= 1'b1;
+				rF1_IR 			<= I_DAT_I;
+			end
+			rF1_valPC		<= I_ADDR_O;
 			if(rW_valid) begin
 				if(rW_dstR_CS) begin
 					rRegBank[rW_dst] <= wW_dstVal;

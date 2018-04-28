@@ -54,8 +54,8 @@ module cpu_cond_forward(
 	// **********
 	// ATRRIBUTE
 	// **********
-	wire					wD_INS_JMP_CAL;
-	wire					wD_INS_RET;
+	wire					wD_INS_JMP;
+	wire					wD_INS_CAL;
 	wire					wD_INS_RET;
 	wire					wE_INS_ALU;
 	wire					wE_INS_ROT;
@@ -65,8 +65,13 @@ module cpu_cond_forward(
 	// **********
 	// INSTANCE MODULE
 	// **********
-	// JMP/CAL: 01xxx100
-	assign wD_INS_JMP_CAL	= (~D_OPCODE_I[7]) & ( D_OPCODE_I[6]) & (~D_OPCODE_I[0]);
+	// JMP 01xxxx00
+	assign wD_INS_JMP		= (~D_OPCODE_I[7]) & ( D_OPCODE_I[6]) & (~D_OPCODE_I[1])& (~D_OPCODE_I[0]);
+	// CAL 01xxxx10
+	assign wD_INS_CAL		= (~D_OPCODE_I[7]) & ( D_OPCODE_I[6]) & ( D_OPCODE_I[1])& (~D_OPCODE_I[0]);
+	// RET 00xxxx11
+	assign wD_INS_RET		= (~D_OPCODE_I[7]) & (~D_OPCODE_I[6]) & ( D_OPCODE_I[1])& ( D_OPCODE_I[0]);
+	
 	assign wE_INS_ALU		= ( ( D_OPCODE_I[7]) & (~D_OPCODE_I[6]) & (~(&D_OPCODE_I[2:0])) ) |
 							  ( (~D_OPCODE_I[7]) & (~D_OPCODE_I[6]) & ( D_OPCODE_I[2]) & (~D_OPCODE_I[1]) & (~D_OPCODE_I[0]) );
 	assign wE_INS_ROT		= ( (~D_OPCODE_I[7]) & (~D_OPCODE_I[6]) & (~D_OPCODE_I[2]) & ( D_OPCODE_I[1]) & (~D_OPCODE_I[0]) );
@@ -77,7 +82,8 @@ module cpu_cond_forward(
 							  ( (~D_OPCODE_I[4]) & ( D_OPCODE_I[3])& wStatus[1] ) |
 							  ( ( D_OPCODE_I[4]) & (~D_OPCODE_I[3])& wStatus[2] ) |
 							  ( ( D_OPCODE_I[4]) & ( D_OPCODE_I[3])& wStatus[3] );
-	assign COND_JMP_CAL_O	= wD_INS_JMP_CAL & ( ( D_OPCODE_I[2] ) | ( (~D_OPCODE_I[5])^wCOND ) );
+	assign COND_JMP_O		= wD_INS_JMP	 & ( ( D_OPCODE_I[2] ) | ( (~D_OPCODE_I[5])^wCOND ) );
+	assign COND_CAL_O		= wD_INS_CAL	 & ( ( D_OPCODE_I[2] ) | ( (~D_OPCODE_I[5])^wCOND ) );
 	assign COND_RET_O		= wD_INS_RET     & ( ( D_OPCODE_I[2] ) | ( (~D_OPCODE_I[5])^wCOND ) );
 
 	// **********
