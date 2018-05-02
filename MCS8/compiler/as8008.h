@@ -72,11 +72,6 @@ typedef struct _ref
 	void *ptrFile;
 } s_ref;
 
-typedef struct _ref_global
-{
-	char *refString;
-} s_ref_global;
-
 typedef struct _file
 {
 	char filename[PATH_MAX];			// 文件名
@@ -107,6 +102,8 @@ void SolveCommandLine(int argc, char **argv);
 void InitGlobalData();
 void AddNewFile(const char *filename);
 void Compile();
+void CompileFile_II(s_file *pFile);
+void CompileFile_III(s_file *pFile);
 void DumpCommandLine();
 
 s_list *ListNew();
@@ -133,9 +130,11 @@ void SymbolMap_Debug_Dump(s_list *pMap);
 void SymbolMap_UpdateGlobal(s_file *pFile);
 
 void Debug_DumpListIns(s_list *pList);
+void Debug_DumpFile_SymbolTable(s_file * pFile);
 
 void Output_Raw();
 void Output_Hex();
 void Output_Bin();
+void ConvertToBin(char *pStr, unsigned char v);
 
 #endif

@@ -1,3 +1,0 @@
-# Hashes of file build rules.
-22cb5ddd4bb3802306ef071bba2d699a lex.yy.c
-3da3faf938e3c62d2a0b880634f3d5e3 parser.tab.c

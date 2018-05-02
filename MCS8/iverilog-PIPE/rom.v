@@ -57,7 +57,7 @@ module rom(
 	// **********
 	initial begin
 		// $readmemh("rom.dat", mem);
-		$readmemb("rom_bin.dat", mem);
+		$readmemb("test1.bin", mem);
 		end
 	
 	always @(ADDR_I) begin

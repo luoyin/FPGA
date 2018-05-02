@@ -199,7 +199,7 @@ void Compile()
 	pListFile=gData->pListFile->pHead->next;
 	while(pListFile!=gData->pListFile->pTail)
 	{
-		pFile=(s_file*)pListFile->ptr;
+		pFile=(s_file *)pListFile->ptr;
 		if(D!=0)
 		{
 			printf("Compile File: %s\n", pFile->filename);
@@ -212,6 +212,7 @@ void Compile()
 		{
 			Debug_DumpListIns(pFile->pListIns);
 		}
+		SymbolMap_UpdateGlobal(pFile);
 		pListFile=pListFile->next;
 	}
 	
@@ -219,8 +220,8 @@ void Compile()
 	pListFile=gData->pListFile->pHead->next;
 	while(pListFile!=gData->pListFile->pTail)
 	{
-		pFile=(s_file*)pListFile->ptr;
-		SymbolMap_UpdateGlobal(pFile);
+		pFile=(s_file *)pListFile->ptr;
+		CompileFile_II(pFile);
 		pListFile=pListFile->next;
 	}
 	
@@ -228,9 +229,72 @@ void Compile()
 	pListFile=gData->pListFile->pHead->next;
 	while(pListFile!=gData->pListFile->pTail)
 	{
-		pFile=(s_file*)pListFile->ptr;
-		
+		pFile=(s_file *)pListFile->ptr;
+		CompileFile_III(pFile);
 		pListFile=pListFile->next;
+	}
+}
+
+void CompileFile_II(s_file* pFile)
+{
+	s_list_elem *pInsHead, *pInsTail, *pInsElem;
+	s_ins *pIns;
+	s_ref *pRef;
+	
+	pInsHead=pFile->pListIns->pHead;
+	pInsTail=pFile->pListIns->pTail;
+	pInsElem=pInsHead->next;
+	while(pInsElem!=pInsTail)
+	{
+		pIns=(s_ins *)pInsElem->ptr;
+		if(pIns->oprandString!=NULL)
+		{
+			pRef=SymbolMap_FindRef(pFile->pSymbolTable, pIns->oprandString);
+			if(pRef==NULL)
+			{
+				pRef=SymbolMap_FindRef(gData->pSymbolTableGlobal, pIns->oprandString);
+				if(pRef==NULL)
+				{
+					fprintf(stderr, "Error: undefined symbol %s in file %s (line %d)\n", pIns->oprandString, pFile->filename, pIns->lineno);
+					exit(-1);
+				}
+			}
+			if(pIns->length==2)
+			{
+				pIns->data[1]=pRef->value&0xFF; 
+			}
+			else if(pIns->length==3)
+			{
+				pIns->data[1]=pRef->value&0xFF;
+				pIns->data[2]=(pRef->value>>8)&0x3F;
+			}
+			free(pIns->oprandString);
+			pIns->oprandString=NULL;
+		}
+		pInsElem=pInsElem->next;
+	}
+}
+
+void CompileFile_III(s_file* pFile)
+{
+	s_list_elem *pInsHead, *pInsTail, *pInsElem;
+	s_ins *pIns;
+	int i;
+	
+	pInsHead=pFile->pListIns->pHead;
+	pInsTail=pFile->pListIns->pTail;
+	pInsElem=pInsHead->next;
+	while(pInsElem!=pInsTail)
+	{
+		pIns=(s_ins *)pInsElem->ptr;
+		if(pIns->address+pIns->length<gData->sizeROM)
+		{
+			for(i=0; i<pIns->length; i++)
+			{
+				gData->pOutput[pIns->address+i]=pIns->data[i];
+			}
+		}
+		pInsElem=pInsElem->next;
 	}
 }
 
@@ -315,6 +379,25 @@ void Debug_DumpListIns(s_list *pList)
 	printf("\n");
 }
 
+void Debug_DumpFile_SymbolTable(s_file* pFile)
+{
+	s_list_elem *pMapHead, *pMapTail;
+	s_list_elem *pMapElem;
+	s_ref *pRef;
+	
+	printf("Symbol Table:\n");
+	pMapHead=pFile->pSymbolTable->pHead;
+	pMapTail=pFile->pSymbolTable->pTail;
+	pMapElem=pMapHead->next;
+	while(pMapElem!=pMapTail)
+	{
+		pRef=(s_ref *)pMapElem->ptr;
+		printf("Symbol=%s, Value=%x\n", pRef->refString, pRef->value);
+		pMapElem=pMapElem->next;
+	}
+	printf("\n");
+}
+
 int SymbolMap_AddRef(s_list *pMap, s_ref *pRef)
 {
 	s_ref *pRefFound;
@@ -322,7 +405,9 @@ int SymbolMap_AddRef(s_list *pMap, s_ref *pRef)
 	
 	pRefFound=SymbolMap_FindRef(pMap, pRef->refString);
 	if(pRefFound!=NULL)
+	{
 		return -1;
+	}
 	ListAppend(pMap, LIST_DATA_REF, pRef);
 	
 	return 0;
@@ -359,9 +444,7 @@ void SymbolMap_UpdateGlobal(s_file *pFile)
 	// 更新全局标志
 	pElem=pFile->pSymbolTableGlobal->pHead->next;
 	while(pElem!=pFile->pSymbolTableGlobal->pTail)
-	{void Output_Raw();
-void Output_Hex();
-void Output_Bin();
+	{
 		pRef=(s_ref *)pElem->ptr;
 		pRefFound=SymbolMap_FindRef(pFile->pSymbolTable, pRef->refString);
 		if(pRefFound!=NULL)
@@ -436,5 +519,41 @@ void Output_Hex()
 
 void Output_Bin()
 {
+	FILE *fout;
+	unsigned int i, j;
+	char str[16];
 	
+	if(strlen(gData->pOutputFile)==0)
+	{
+		fprintf(stderr, "Error: no output file\n");
+		return;
+	}
+	fout=fopen(gData->pOutputFile, "w");
+	
+	for(i=0; i<gData->sizeROM; i+=8)
+	{
+		fprintf(fout, "@%04x    ", i);
+		for(j=i; j<gData->sizeROM && j<i+8; j++)
+		{
+			ConvertToBin(str, gData->pOutput[j]);
+			fprintf(fout, "%s  ", str);
+		}
+		fprintf(fout, "\n");
+	}
+	fclose(fout);
+}
+
+void ConvertToBin(char* pStr, unsigned char v)
+{
+	int i;
+	
+	for(i=0; i<8; i++)
+	{
+		if(v%2==0)
+			pStr[7-i]='0';
+		else
+			pStr[7-i]='1';
+		v=v/2;
+	}
+	pStr[8]=0;
 }

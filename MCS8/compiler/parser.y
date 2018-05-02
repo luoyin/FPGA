@@ -78,6 +78,16 @@ command0:
 	| LRM
 	| INR
 	| DCR
+	| ADR | ADM
+	| ACR | ACM
+	| SUR | SUM
+	| SBR | SBM
+	| NDR | NDM
+	| XRR | XRM
+	| ORR | ORM
+	| CPR | CPM
+	| RET | RFC | RTC
+	| HLT
 	;
 
 command_imm:
