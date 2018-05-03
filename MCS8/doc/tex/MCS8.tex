@@ -90,6 +90,87 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{流水线设计}
+\section{流水线分级}
+采用七级流水线架构:
+$F_{1}\rightarrow F_{2}\rightarrow F_{3}\rightarrow D\rightarrow E\rightarrow M/IO\rightarrow W$
+\begin{itemize}
+  \item $F_{1}$, $F_{2}$, $F_{3}$: 指令获取
+  \item $D$: 译码准备
+  \item $E$: 执行准备
+  \item $M/IO$: RAM/IO准备
+  \item $W$: 回写准备
+\end{itemize}
+
+\subsection{Stage D}
+\subsubsection{寄存器变量}
+\begin{itemize}
+  \item valid
+\end{itemize}
+
+\subsection{Stage E}
+\subsubsection{寄存器变量}
+\begin{itemize}
+  \item valid
+  \item valA
+  \item valS
+\end{itemize}
+
+\subsection{Stage M/IO}
+
+\subsection{Stage W}
+
+\section{流水线操作}
+\subsection{Decode ($D\rightarrow E$)}
+\subsubsection{操作内容}
+\begin{itemize}
+  \item 获取valA, valS
+  \item 获取valH, valL
+\end{itemize}
+
+\subsection{Execute ($E\rightarrow M/IO$)}
+\subsubsection{操作内容}
+\begin{itemize}
+  \item ALU算术操作:\\
+  \textbf{IN}: valA, valS\\
+  \textbf{OUT}: valE
+  \item Mem/IO操作地址准备
+\end{itemize}
+
+\subsection{Memory/IO ($M/IO\rightarrow W$)}
+\subsubsection{操作内容}
+\begin{itemize}
+  \item RAM Read/Write操作
+  \item IO Read/Write操作
+\end{itemize}
+
+\subsection{WriteBack ($W\rightarrow F_{1}$)}
+\subsubsection{操作内容}
+\begin{itemize}
+  \item 寄存器组更新
+\end{itemize}
+
+\section{流水线补充处理}
+\subsection{Forward}
+\subsubsection{概念}
+\begin{itemize}
+  \item 寄存器堆Forward: 寄存器堆相应地址上的值应该在执行完相应的指令后就进行修改, 但在流水线处理过程中, 仅在流水线的最后一级对寄存器堆进行写操作, 这会导致在Decode过程中可能取到未更新的寄存器堆的值, 从而引发执行错误, 故需要进行寄存器堆Forward.\\
+  寄存器堆Forward与以下操作相关联:
+  \begin{itemize}
+    \item LRR操作: 与$valS(E/M/W)$相关
+    \item ALU操作: 与$valE(M/W)$相关
+    \item Mem操作: 与$valM(W)$相关
+    \item IO操作: 与$valIO(W)$相关
+  \end{itemize}
+\end{itemize}
+  
+\subsection{Bubble}
+\subsubsection{概念}
+\paragraph{指令获取Bubble}
+在两字节指令和三字节指令获取时, 暂停$F_{3}\rightarrow D$操作, 跳过一个或两个字节.
+
+\paragraph{寄存器堆Forward Bubble}
+在无法进行寄存器堆Forward操作时, 暂停$F_{1}\rightarrow F_{2}\rightarrow F_{3}\rightarrow D$操作, 等待寄存器堆Forward操作可以进行后恢复.
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -109,5 +190,26 @@
   \item 三次扫描源文件, 生成编译后代码
 \end{itemize}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\appendix
+\chapter{Lattice MXO2片上ROM/RAM仿真代码}
+\section{ROM仿真}
+\subsection{ROM without output register}
+\subsubsection{读操作}
+\begin{itemize}
+  \item 时钟$T_{n}$上沿, ROM Latch Address $A$, Data $D[A]$ output
+  \item 时钟$T_{n+1}$上沿, Output Data $D[A]$ Stable
+\end{itemize}
+
+\subsection{ROM with output register}
+\subsubsection{读操作}
+\begin{itemize}
+  \item 时钟$T_{n}$上沿, ROM Latch Address $A$, 
+  \item 时钟$T_{n+1}$上沿, Latch Data $D[A]$ to output register
+  \item 时钟$T_{n+2}$上沿, Output Data $D[A]$ Stable
+\end{itemize}
+
+\section{RAM仿真}
 
 \end{document}

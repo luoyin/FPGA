@@ -33,7 +33,7 @@ module cpu(
 	// DCode
 	D_DAT_I, D_DAT_O, D_ADDR_O,
 	// IO
-	IO_DAT_I, IO_DAT_O, IO_ADDR_O
+	IO_DAT_I, IO_DAT_O, IO_ADDR_O, IO_CS_O, IO_WR_O
 );
 
 	// **********
@@ -56,13 +56,15 @@ module cpu(
 	// DEFINE OUTPUT
 	// **********
 	// ICode
-	output wire [13:0] I_ADDR_O;
+	output wire [13:0] 	I_ADDR_O;
 	// DCode
-	output wire [7:0]  D_DAT_O;
-	output wire [13:0] D_ADDR_O;
+	output wire  [7:0] 	D_DAT_O;
+	output wire [13:0] 	D_ADDR_O;
 	// IO
-	output wire [7:0]  IO_DAT_O;
-	output wire [4:0]  IO_ADDR_O;
+	output wire  [7:0] 	IO_DAT_O;
+	output wire  [4:0] 	IO_ADDR_O;
+	output wire 		IO_CS_O;
+	output wire			IO_WR_O;
 	
 	// **********
 	// ATRRIBUTE
@@ -168,7 +170,6 @@ module cpu(
 	reg			rM_dstM_CS;				// ->M
 	reg			rM_dstM_CS_C;			// imm->M
 	reg			rM_dstM_CS_S;			// reg->M
-	reg  [4:0] 	rM_addrIO;
 	// ***** Stage W *****
 	reg 		rW_valid;
 	reg [13:0]	rW_valPC;
